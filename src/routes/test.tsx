@@ -221,7 +221,7 @@ function TestPage() {
                   Riprova
                 </Button>
                 <Button asChild>
-                  <Link to="/">Torna ai video</Link>
+                  <Link to="/corso">Torna ai video</Link>
                 </Button>
               </div>
             </div>
