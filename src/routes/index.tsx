@@ -31,19 +31,23 @@ function DashboardPage() {
 
   const allDone = c1 && c2;
 
+  const prussian = "#003153";
   return (
-    <main className="min-h-screen bg-background py-10 px-4">
+    <main className="min-h-screen bg-background py-10 px-4" style={{ color: prussian }}>
       <div className="max-w-4xl mx-auto space-y-10">
         <header className="text-center space-y-3">
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight" style={{ color: prussian }}>
             Corso Privacy per Incaricati
           </h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+          <h2 className="text-xl sm:text-2xl font-bold italic" style={{ color: prussian }}>
+            Guida Pratica per l'Addetto e l'Incaricato
+          </h2>
+          <p className="max-w-2xl mx-auto" style={{ color: prussian, opacity: 0.85 }}>
             Benvenuto nel modulo formativo. Segui i passaggi sottostanti: guarda i video
             in ordine, senza saltare, e completa il test finale per ottenere l'attestato.
           </p>
           <div className="flex justify-center pt-2">
-            <Button asChild size="lg">
+            <Button asChild size="lg" style={{ backgroundColor: prussian, color: "#fff" }}>
               <Link to="/corso">
                 {c1 || c2 ? "Continua il corso" : "Inizia il corso"}
               </Link>
