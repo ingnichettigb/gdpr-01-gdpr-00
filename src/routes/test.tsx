@@ -218,18 +218,26 @@ function TestPage() {
                   : `Non hai raggiunto la soglia minima (${PASS_THRESHOLD}/3). Riprova.`}
               </p>
               <div className="flex justify-center gap-3 flex-wrap">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setAnswers({});
-                    setSubmitted(false);
-                  }}
-                >
-                  Riprova
-                </Button>
-                <Button asChild>
-                  <Link to="/corso">Torna ai video</Link>
-                </Button>
+                {passed ? (
+                  <Button asChild>
+                    <Link to="/attestato">Scarica il tuo attestato</Link>
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setAnswers({});
+                        setSubmitted(false);
+                      }}
+                    >
+                      Riprova
+                    </Button>
+                    <Button asChild>
+                      <Link to="/corso">Torna ai video</Link>
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           )}
