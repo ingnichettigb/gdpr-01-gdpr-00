@@ -5,11 +5,15 @@ import { Lock, CheckCircle2 } from "lucide-react";
 interface VideoLessonProps {
   videoId: string;
   videoUrl: string;
-  nextTestUrl: string;
+  nextTestUrl?: string;
   title?: string;
-  /** Seconds of tolerance for "completed" detection (default 1.5s) */
+  /** Hide built-in "Vai al test" button (when parent renders its own) */
+  hideTestButton?: boolean;
+  /** Lock the player until a prerequisite is met */
+  locked?: boolean;
+  /** Notify parent when completion state changes */
+  onCompletedChange?: (completed: boolean) => void;
   completionTolerance?: number;
-  /** Save interval in ms (default 5000) */
   saveIntervalMs?: number;
 }
 
@@ -19,11 +23,19 @@ const keys = (id: string) => ({
   completed: `completed_${id}`,
 });
 
+export function isLessonCompleted(videoId: string): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(`completed_${videoId}`) === "true";
+}
+
 export function VideoLesson({
   videoId,
   videoUrl,
   nextTestUrl,
   title,
+  hideTestButton = false,
+  locked = false,
+  onCompletedChange,
   completionTolerance = 1.5,
   saveIntervalMs = 5000,
 }: VideoLessonProps) {
@@ -40,10 +52,13 @@ export function VideoLesson({
   });
   const [showSkipWarning, setShowSkipWarning] = useState(false);
 
-  // Resume from saved position on mount
+  useEffect(() => {
+    onCompletedChange?.(completed);
+  }, [completed, onCompletedChange]);
+
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || locked) return;
     const saved = parseFloat(localStorage.getItem(k.progress) ?? "0");
     const onLoaded = () => {
       if (saved > 0 && saved < video.duration) {
@@ -53,10 +68,10 @@ export function VideoLesson({
     video.addEventListener("loadedmetadata", onLoaded);
     return () => video.removeEventListener("loadedmetadata", onLoaded);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videoId]);
+  }, [videoId, locked]);
 
-  // Periodic save every N seconds
   useEffect(() => {
+    if (locked) return;
     const id = window.setInterval(() => {
       const video = videoRef.current;
       if (!video || video.paused || video.ended) return;
@@ -64,32 +79,29 @@ export function VideoLesson({
     }, saveIntervalMs);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videoId, saveIntervalMs]);
+  }, [videoId, saveIntervalMs, locked]);
 
   const handleTimeUpdate = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
     const t = video.currentTime;
-
-    // Update max progress as user watches forward naturally
     if (t > maxProgress) {
-      const next = t;
-      setMaxProgress(next);
-      localStorage.setItem(k.max, String(next));
+      setMaxProgress(t);
+      localStorage.setItem(k.max, String(t));
     }
   }, [maxProgress, k.max]);
 
   const handleSeeking = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
-    if (completed) return; // once completed, free seek
+    if (completed) return;
     const allowed = maxProgress + completionTolerance;
     if (video.currentTime > allowed) {
       video.currentTime = Math.max(0, maxProgress);
       setShowSkipWarning(true);
       window.setTimeout(() => setShowSkipWarning(false), 2500);
     }
-  }, [completed, maxProgress, completionTolerance, k.max]);
+  }, [completed, maxProgress, completionTolerance]);
 
   const handleEnded = useCallback(() => {
     localStorage.setItem(k.completed, "true");
@@ -97,28 +109,28 @@ export function VideoLesson({
     setCompleted(true);
   }, [k.completed, k.progress]);
 
-  const handleTestClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (!completed) {
-      e.preventDefault();
-      alert("Per accedere al test devi prima completare la visione del video.");
-    }
-  };
-
   return (
-    <div className="w-full max-w-3xl mx-auto space-y-4">
-      {title && <h2 className="text-2xl font-semibold">{title}</h2>}
+    <div className="w-full space-y-3">
+      {title && <h3 className="text-xl font-semibold">{title}</h3>}
 
       <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
-        <video
-          ref={videoRef}
-          src={videoUrl}
-          controls
-          controlsList="nodownload"
-          onTimeUpdate={handleTimeUpdate}
-          onSeeking={handleSeeking}
-          onEnded={handleEnded}
-          className="w-full h-full"
-        />
+        {locked ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-white gap-2">
+            <Lock className="h-8 w-8" />
+            <p className="text-sm">Completa il modulo precedente per sbloccare questo video</p>
+          </div>
+        ) : (
+          <video
+            ref={videoRef}
+            src={videoUrl}
+            controls
+            controlsList="nodownload"
+            onTimeUpdate={handleTimeUpdate}
+            onSeeking={handleSeeking}
+            onEnded={handleEnded}
+            className="w-full h-full"
+          />
+        )}
         {showSkipWarning && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-destructive text-destructive-foreground text-sm px-3 py-1.5 rounded-md shadow">
             Non puoi saltare avanti nel video
@@ -131,30 +143,31 @@ export function VideoLesson({
           {completed ? (
             <>
               <CheckCircle2 className="h-4 w-4 text-green-600" />
-              Lezione completata
+              Modulo completato
+            </>
+          ) : locked ? (
+            <>
+              <Lock className="h-4 w-4" />
+              Bloccato
             </>
           ) : (
             <>
               <Lock className="h-4 w-4" />
-              Guarda tutto il video per sbloccare il test
+              Guarda tutto il video per completare il modulo
             </>
           )}
         </div>
 
-        <Button
-          asChild={completed}
-          disabled={!completed}
-          variant={completed ? "default" : "secondary"}
-          className={completed ? "" : "opacity-60 cursor-not-allowed"}
-        >
-          {completed ? (
-            <a href={nextTestUrl} onClick={handleTestClick}>
-              Vai al test
-            </a>
-          ) : (
-            <span>Vai al test</span>
-          )}
-        </Button>
+        {!hideTestButton && nextTestUrl && (
+          <Button
+            asChild={completed}
+            disabled={!completed}
+            variant={completed ? "default" : "secondary"}
+            className={completed ? "" : "opacity-60 cursor-not-allowed"}
+          >
+            {completed ? <a href={nextTestUrl}>Vai al test</a> : <span>Vai al test</span>}
+          </Button>
+        )}
       </div>
     </div>
   );
