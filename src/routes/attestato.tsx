@@ -28,7 +28,7 @@ function AttestatoPage() {
   const navigate = useNavigate();
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [data, setData] = useState<Data | null>(null);
-  const [form, setForm] = useState<Data>({ nome: "", luogo: "", dataNascita: "" });
+  const [form, setForm] = useState<Data>({ nome: "", luogo: "", dataNascita: "", cf: "" });
   const [flipped, setFlipped] = useState(false);
 
   useEffect(() => {
