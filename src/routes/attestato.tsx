@@ -22,7 +22,7 @@ export const Route = createFileRoute("/attestato")({
 const STORAGE_KEY = "attestato_data";
 const PASSED_KEY = "test_passed";
 
-type Data = { nome: string; luogo: string; dataNascita: string };
+type Data = { nome: string; luogo: string; dataNascita: string; cf: string };
 
 function AttestatoPage() {
   const navigate = useNavigate();
