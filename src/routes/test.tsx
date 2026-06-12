@@ -113,6 +113,13 @@ function TestPage() {
           onSubmit={(e) => {
             e.preventDefault();
             setSubmitted(true);
+            const finalScore = QUESTIONS.reduce(
+              (s, q) => (answers[q.id] === q.correct ? s + 1 : s),
+              0,
+            );
+            if (finalScore >= PASS_THRESHOLD) {
+              localStorage.setItem("test_passed", "true");
+            }
             window.scrollTo({ top: 0, behavior: "smooth" });
           }}
           className="space-y-6"
