@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TestRouteImport } from './routes/test'
 import { Route as CorsoRouteImport } from './routes/corso'
+import { Route as AttestatoRouteImport } from './routes/attestato'
 import { Route as IndexRouteImport } from './routes/index'
 
 const TestRoute = TestRouteImport.update({
@@ -23,6 +24,11 @@ const CorsoRoute = CorsoRouteImport.update({
   path: '/corso',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AttestatoRoute = AttestatoRouteImport.update({
+  id: '/attestato',
+  path: '/attestato',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -31,30 +37,34 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/attestato': typeof AttestatoRoute
   '/corso': typeof CorsoRoute
   '/test': typeof TestRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/attestato': typeof AttestatoRoute
   '/corso': typeof CorsoRoute
   '/test': typeof TestRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/attestato': typeof AttestatoRoute
   '/corso': typeof CorsoRoute
   '/test': typeof TestRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/corso' | '/test'
+  fullPaths: '/' | '/attestato' | '/corso' | '/test'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/corso' | '/test'
-  id: '__root__' | '/' | '/corso' | '/test'
+  to: '/' | '/attestato' | '/corso' | '/test'
+  id: '__root__' | '/' | '/attestato' | '/corso' | '/test'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AttestatoRoute: typeof AttestatoRoute
   CorsoRoute: typeof CorsoRoute
   TestRoute: typeof TestRoute
 }
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CorsoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/attestato': {
+      id: '/attestato'
+      path: '/attestato'
+      fullPath: '/attestato'
+      preLoaderRoute: typeof AttestatoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AttestatoRoute: AttestatoRoute,
   CorsoRoute: CorsoRoute,
   TestRoute: TestRoute,
 }
