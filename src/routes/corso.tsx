@@ -48,7 +48,7 @@ function CorsoPage() {
         <VideoLesson
           videoId={LESSON_1}
           videoUrl="https://www.w3schools.com/html/mov_bbb.mp4"
-          title="Modulo 1 — Ruolo dell'incaricato"
+          title="Modulo 1 — Guida Pratica per l'Addetto e l'Incaricato"
           hideTestButton
           onCompletedChange={setC1}
         />
@@ -56,7 +56,7 @@ function CorsoPage() {
         <VideoLesson
           videoId={LESSON_2}
           videoUrl="https://www.w3schools.com/html/movie.mp4"
-          title="Modulo 2 — Obblighi e gestione violazioni"
+          title="Modulo 2 — Privacy come processo continuo"
           hideTestButton
           locked={!c1}
           onCompletedChange={setC2}
