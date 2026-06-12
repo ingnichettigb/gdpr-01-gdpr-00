@@ -289,7 +289,7 @@ function AttestatoPage() {
               />
             </div>
 
-            <div className="mt-auto pt-6 text-xs text-slate-500 text-center">
+            <div className="mt-6 text-xs text-slate-500 text-center">
               Documento generato elettronicamente da Corporate Boost Service —{" "}
               {oggi}
             </div>
