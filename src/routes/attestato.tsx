@@ -108,6 +108,16 @@ function AttestatoPage() {
               onChange={(e) => setForm({ ...form, dataNascita: e.target.value })}
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="cf">Codice Fiscale</Label>
+            <Input
+              id="cf"
+              required
+              value={form.cf}
+              onChange={(e) => setForm({ ...form, cf: e.target.value })}
+              placeholder="RSSMRA85T10A562S"
+            />
+          </div>
           <Button type="submit" className="w-full">
             Genera attestato
           </Button>
