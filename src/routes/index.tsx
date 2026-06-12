@@ -89,7 +89,7 @@ function DashboardPage() {
             </CardHeader>
             <CardContent className="space-y-2">
               <p className="text-sm text-muted-foreground">
-                Obblighi e gestione violazioni.
+                Privacy come processo continuo.
               </p>
               <div className="flex items-center justify-between">
                 {c2 ? (
