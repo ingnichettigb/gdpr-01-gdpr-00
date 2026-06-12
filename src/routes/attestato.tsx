@@ -225,18 +225,18 @@ function AttestatoPage() {
           className={`${flipped ? "block" : "hidden"} print:block print:mt-0 bg-white text-slate-900 shadow-lg rounded-md aspect-[1.414/1] relative overflow-hidden border-[10px] border-double border-emerald-700 p-10 print:shadow-none print:rounded-none print:break-before-page`}
         >
           <div className="absolute inset-4 border border-emerald-700/40 rounded" />
-          <div className="relative h-full flex flex-col">
+          <div className="relative h-full flex flex-col justify-center">
             <p className="uppercase tracking-[0.3em] text-xs text-emerald-800 font-semibold text-center">
               Corporate Boost Service
             </p>
-            <h2 className="mt-4 text-2xl font-extrabold text-emerald-800 text-center">
+            <h2 className="mt-2 text-2xl font-extrabold text-emerald-800 text-center">
               Argomenti trattati nel corso
             </h2>
             <p className="text-center text-xs text-slate-600 italic">
               GDPR — Guida Pratica per l'Addetto e l'Incaricato
             </p>
 
-            <div className="mt-6 grid grid-cols-2 gap-x-8 gap-y-3 text-sm text-slate-800">
+            <div className="mt-4 grid grid-cols-2 gap-x-8 gap-y-3 text-sm text-slate-800">
               <Topic
                 n="1"
                 title="Il Regolamento europeo (GDPR)"
