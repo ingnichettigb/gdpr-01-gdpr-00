@@ -22,13 +22,13 @@ export const Route = createFileRoute("/attestato")({
 const STORAGE_KEY = "attestato_data";
 const PASSED_KEY = "test_passed";
 
-type Data = { nome: string; luogo: string; dataNascita: string };
+type Data = { nome: string; luogo: string; dataNascita: string; cf: string };
 
 function AttestatoPage() {
   const navigate = useNavigate();
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [data, setData] = useState<Data | null>(null);
-  const [form, setForm] = useState<Data>({ nome: "", luogo: "", dataNascita: "" });
+  const [form, setForm] = useState<Data>({ nome: "", luogo: "", dataNascita: "", cf: "" });
   const [flipped, setFlipped] = useState(false);
 
   useEffect(() => {
@@ -108,6 +108,16 @@ function AttestatoPage() {
               onChange={(e) => setForm({ ...form, dataNascita: e.target.value })}
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="cf">Codice Fiscale</Label>
+            <Input
+              id="cf"
+              required
+              value={form.cf}
+              onChange={(e) => setForm({ ...form, cf: e.target.value })}
+              placeholder="RSSMRA85T10A562S"
+            />
+          </div>
           <Button type="submit" className="w-full">
             Genera attestato
           </Button>
@@ -146,20 +156,20 @@ function AttestatoPage() {
           className={`${flipped ? "hidden" : "block"} print:block bg-white text-slate-900 shadow-lg rounded-md aspect-[1.414/1] relative overflow-hidden border-[10px] border-double border-emerald-700 p-10 print:shadow-none print:rounded-none print:border-emerald-700`}
         >
           <div className="absolute inset-4 border border-emerald-700/40 rounded" />
-          <div className="relative h-full flex flex-col items-center text-center">
+          <div className="relative h-full flex flex-col items-center justify-center text-center">
             <p className="uppercase tracking-[0.3em] text-xs text-emerald-800 font-semibold">
               Corporate Boost Service
             </p>
-            <h1 className="mt-6 text-4xl font-extrabold text-emerald-800 tracking-tight">
+            <h1 className="mt-4 text-4xl font-extrabold text-emerald-800 tracking-tight">
               Attestato di Partecipazione
             </h1>
             <p className="mt-1 text-sm italic text-slate-600">
               e superamento del test finale
             </p>
 
-            <p className="mt-8 text-base text-slate-700">Si certifica che</p>
+            <p className="mt-6 text-base text-slate-700">Si certifica che</p>
             <p className="mt-2 text-3xl font-bold uppercase">{data.nome}</p>
-            {(data.luogo || data.dataNascita) && (
+            {(data.luogo || data.dataNascita || data.cf) && (
               <p className="mt-2 text-sm text-slate-600">
                 {data.luogo && <>Nato/a a {data.luogo}</>}
                 {data.luogo && data.dataNascita && " — "}
@@ -173,13 +183,19 @@ function AttestatoPage() {
                     })}
                   </>
                 )}
+                {data.cf && (
+                  <>
+                    <br />
+                    <span className="font-semibold">C.F. {data.cf.toUpperCase()}</span>
+                  </>
+                )}
               </p>
             )}
 
-            <p className="mt-6 text-base text-slate-700">
+            <p className="mt-5 text-base text-slate-700">
               ha partecipato e superato con esito positivo il corso in e-learning
             </p>
-            <h2 className="mt-3 text-2xl font-bold italic text-emerald-800 max-w-2xl leading-snug">
+            <h2 className="mt-2 text-2xl font-bold italic text-emerald-800 max-w-2xl leading-snug">
               "Il Regolamento europeo in materia di protezione dei dati personali"
             </h2>
             <p className="mt-1 text-sm font-medium text-slate-700">
@@ -189,7 +205,7 @@ function AttestatoPage() {
               Guida Pratica per l'Addetto e l'Incaricato
             </p>
 
-            <div className="mt-auto w-full flex justify-between items-end pt-6 text-sm">
+            <div className="mt-8 w-full flex justify-between items-end pt-4 text-sm">
               <div className="text-left">
                 <p className="text-slate-600">Data di rilascio</p>
                 <p className="font-semibold">{oggi}</p>
@@ -209,18 +225,18 @@ function AttestatoPage() {
           className={`${flipped ? "block" : "hidden"} print:block print:mt-0 bg-white text-slate-900 shadow-lg rounded-md aspect-[1.414/1] relative overflow-hidden border-[10px] border-double border-emerald-700 p-10 print:shadow-none print:rounded-none print:break-before-page`}
         >
           <div className="absolute inset-4 border border-emerald-700/40 rounded" />
-          <div className="relative h-full flex flex-col">
+          <div className="relative h-full flex flex-col justify-center">
             <p className="uppercase tracking-[0.3em] text-xs text-emerald-800 font-semibold text-center">
               Corporate Boost Service
             </p>
-            <h2 className="mt-4 text-2xl font-extrabold text-emerald-800 text-center">
+            <h2 className="mt-2 text-2xl font-extrabold text-emerald-800 text-center">
               Argomenti trattati nel corso
             </h2>
             <p className="text-center text-xs text-slate-600 italic">
               GDPR — Guida Pratica per l'Addetto e l'Incaricato
             </p>
 
-            <div className="mt-6 grid grid-cols-2 gap-x-8 gap-y-3 text-sm text-slate-800">
+            <div className="mt-4 grid grid-cols-2 gap-x-8 gap-y-3 text-sm text-slate-800">
               <Topic
                 n="1"
                 title="Il Regolamento europeo (GDPR)"
@@ -273,7 +289,7 @@ function AttestatoPage() {
               />
             </div>
 
-            <div className="mt-auto pt-6 text-xs text-slate-500 text-center">
+            <div className="mt-6 text-xs text-slate-500 text-center">
               Documento generato elettronicamente da Corporate Boost Service —{" "}
               {oggi}
             </div>
