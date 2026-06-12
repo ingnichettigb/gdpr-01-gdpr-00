@@ -321,16 +321,15 @@ function AttestatoPage() {
   );
 }
 
-function Topic({ n, title, desc }: { n: string; title: string; desc: string }) {
+function TopicGroup({ title, items }: { title: string; items: string[] }) {
   return (
-    <div className="flex gap-3">
-      <span className="flex-shrink-0 w-7 h-7 rounded-full bg-emerald-700 text-white text-xs font-bold flex items-center justify-center">
-        {n}
-      </span>
-      <div>
-        <p className="font-semibold leading-tight">{title}</p>
-        <p className="text-xs text-slate-600 leading-snug">{desc}</p>
-      </div>
+    <div className="flex flex-col">
+      <p className="font-bold text-emerald-800 leading-tight">{title}</p>
+      <ul className="list-disc list-inside text-slate-700 leading-tight mt-0.5 space-y-0">
+        {items.map((it, i) => (
+          <li key={i}>{it}</li>
+        ))}
+      </ul>
     </div>
   );
 }
