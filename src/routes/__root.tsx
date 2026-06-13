@@ -66,5 +66,40 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  return <Outlet />;
+  const navigate = useNavigate();
+
+  const handleReset = () => {
+    if (typeof window === "undefined") return;
+    if (!window.confirm("Sei sicuro di voler resettare il primo accesso? Verranno cancellati tutti i dati e i progressi del corso.")) {
+      return;
+    }
+    // Clear all local and session storage
+    localStorage.clear();
+    sessionStorage.clear();
+    // Clear all cookies
+    const cookies = document.cookie.split(";");
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i];
+      const eqPos = cookie.indexOf("=");
+      const name = eqPos > -1 ? cookie.substring(0, eqPos).trim() : cookie.trim();
+      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
+      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;domain=" + window.location.hostname + ";";
+    }
+    // Hard reload to initial page
+    window.location.href = "/";
+  };
+
+  return (
+    <>
+      <button
+        onClick={handleReset}
+        className="fixed top-3 right-3 z-[9999] flex items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive shadow-sm hover:bg-destructive/20 print:hidden"
+        title="Resetta primo accesso"
+      >
+        <RotateCcw className="h-3.5 w-3.5" />
+        Reset Primo Accesso
+      </button>
+      <Outlet />
+    </>
+  );
 }
