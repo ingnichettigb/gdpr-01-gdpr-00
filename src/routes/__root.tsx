@@ -66,8 +66,6 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  const navigate = useNavigate();
-
   const handleReset = () => {
     if (typeof window === "undefined") return;
     if (!window.confirm("Sei sicuro di voler resettare il primo accesso? Verranno cancellati tutti i dati e i progressi del corso.")) {
