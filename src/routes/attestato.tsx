@@ -312,9 +312,22 @@ function AttestatoPage() {
       <style>{`
         @media print {
           @page { size: A4 landscape; margin: 0; }
-          body { background: white !important; }
+          html, body { background: white !important; margin: 0 !important; padding: 0 !important; }
           .print\\:hidden { display: none !important; }
           .print\\:block { display: block !important; }
+          main { padding: 0 !important; margin: 0 !important; }
+          main > div { max-width: none !important; margin: 0 !important; padding: 0 !important; gap: 0 !important; }
+          section {
+            width: 100vw !important;
+            height: 100vh !important;
+            aspect-ratio: auto !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+            box-sizing: border-box !important;
+            page-break-after: always;
+            break-after: page;
+          }
+          section:last-of-type { page-break-after: auto; break-after: auto; }
         }
       `}</style>
     </main>
