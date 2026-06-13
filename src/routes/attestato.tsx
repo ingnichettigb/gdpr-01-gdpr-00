@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle, Award, Printer, RotateCw } from "lucide-react";
 
 export const Route = createFileRoute("/attestato")({
@@ -22,13 +23,26 @@ export const Route = createFileRoute("/attestato")({
 const STORAGE_KEY = "attestato_data";
 const PASSED_KEY = "test_passed";
 
-type Data = { nome: string; luogo: string; dataNascita: string; cf: string };
+type Data = {
+  nome: string;
+  luogo: string;
+  dataNascita: string;
+  cf: string;
+  ditta: string;
+};
 
 function AttestatoPage() {
   const navigate = useNavigate();
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [data, setData] = useState<Data | null>(null);
-  const [form, setForm] = useState<Data>({ nome: "", luogo: "", dataNascita: "", cf: "" });
+  const [form, setForm] = useState<Data>({
+    nome: "",
+    luogo: "",
+    dataNascita: "",
+    cf: "",
+    ditta: "",
+  });
+  const [accepted, setAccepted] = useState(false);
   const [flipped, setFlipped] = useState(false);
 
   useEffect(() => {
@@ -37,7 +51,10 @@ function AttestatoPage() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        setData(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.nome && parsed.cf && parsed.ditta) {
+          setData({ ...parsed, cf: String(parsed.cf).toUpperCase() });
+        }
       } catch {
         // ignore
       }
@@ -67,9 +84,10 @@ function AttestatoPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (!form.nome.trim()) return;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
-            setData(form);
+            if (!form.nome.trim() || !form.cf.trim() || !form.ditta.trim() || !accepted) return;
+            const payload: Data = { ...form, cf: form.cf.toUpperCase() };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+            setData(payload);
           }}
           className="w-full max-w-md space-y-5 rounded-xl border bg-card p-6"
         >
@@ -88,6 +106,16 @@ function AttestatoPage() {
               value={form.nome}
               onChange={(e) => setForm({ ...form, nome: e.target.value })}
               placeholder="Mario Rossi"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="ditta">Nome della ditta</Label>
+            <Input
+              id="ditta"
+              required
+              value={form.ditta}
+              onChange={(e) => setForm({ ...form, ditta: e.target.value })}
+              placeholder="ACME S.r.l."
             />
           </div>
           <div className="space-y-2">
@@ -114,11 +142,39 @@ function AttestatoPage() {
               id="cf"
               required
               value={form.cf}
-              onChange={(e) => setForm({ ...form, cf: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, cf: e.target.value.toUpperCase() })
+              }
               placeholder="RSSMRA85T10A562S"
+              style={{ textTransform: "uppercase" }}
+              maxLength={16}
             />
           </div>
-          <Button type="submit" className="w-full">
+
+          <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-[13px] text-amber-900 flex gap-2">
+            <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+            <div>
+              I dati inseriti sono sotto la <strong>responsabilità esclusiva
+              dello scrivente</strong>. Eventuali errori di digitazione
+              <strong> non potranno essere corretti</strong> una volta generato
+              l'attestato. Verificare attentamente nome, codice fiscale e nome
+              della ditta prima di proseguire.
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2">
+            <Checkbox
+              id="accept"
+              checked={accepted}
+              onCheckedChange={(v) => setAccepted(v === true)}
+            />
+            <Label htmlFor="accept" className="text-sm leading-snug font-normal">
+              Confermo di aver verificato i dati e accetto la responsabilità di
+              quanto inserito.
+            </Label>
+          </div>
+
+          <Button type="submit" className="w-full" disabled={!accepted}>
             Genera attestato
           </Button>
         </form>
@@ -131,6 +187,8 @@ function AttestatoPage() {
     month: "long",
     year: "numeric",
   });
+  const cfUpper = data.cf.toUpperCase();
+  const dittaUpper = data.ditta;
 
   return (
     <main className="min-h-screen bg-muted/30 py-8 px-4 print:bg-white print:p-0">
@@ -153,24 +211,27 @@ function AttestatoPage() {
 
         {/* FRONTE */}
         <section
-          className={`${flipped ? "hidden" : "block"} print:block bg-white text-slate-900 shadow-lg rounded-md aspect-[1.414/1] relative overflow-hidden border-[10px] border-double border-emerald-700 p-10 print:shadow-none print:rounded-none print:border-emerald-700`}
+          className={`${flipped ? "hidden" : "block"} print:block bg-white text-slate-900 shadow-lg rounded-md aspect-[1.414/1] relative overflow-hidden border-[10px] border-double border-emerald-700 p-8 print:shadow-none print:rounded-none print:border-emerald-700`}
         >
           <div className="absolute inset-4 border border-emerald-700/40 rounded" />
           <div className="relative h-full flex flex-col items-center justify-center text-center">
             <p className="uppercase tracking-[0.3em] text-xs text-emerald-800 font-semibold">
               Corporate Boost Service
             </p>
-            <h1 className="mt-4 text-4xl font-extrabold text-emerald-800 tracking-tight">
+            <h1 className="mt-3 text-3xl font-extrabold text-emerald-800 tracking-tight">
               Attestato di Partecipazione
             </h1>
             <p className="mt-1 text-sm italic text-slate-600">
               e superamento del test finale
             </p>
 
-            <p className="mt-6 text-base text-slate-700">Si certifica che</p>
-            <p className="mt-2 text-3xl font-bold uppercase">{data.nome}</p>
-            {(data.luogo || data.dataNascita || data.cf) && (
-              <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-4 text-base text-slate-700">Si certifica che</p>
+            <p className="mt-1 text-2xl font-bold uppercase">{data.nome}</p>
+            <p className="mt-1 text-sm font-semibold tracking-wider text-slate-800">
+              C.F. {cfUpper}
+            </p>
+            {(data.luogo || data.dataNascita) && (
+              <p className="mt-1 text-xs text-slate-600">
                 {data.luogo && <>Nato/a a {data.luogo}</>}
                 {data.luogo && data.dataNascita && " — "}
                 {data.dataNascita && (
@@ -183,31 +244,35 @@ function AttestatoPage() {
                     })}
                   </>
                 )}
-                {data.cf && (
-                  <>
-                    <br />
-                    <span className="font-semibold">C.F. {data.cf.toUpperCase()}</span>
-                  </>
-                )}
               </p>
             )}
 
-            <p className="mt-5 text-base text-slate-700">
+            <p className="mt-3 text-sm text-slate-700">
               ha partecipato e superato con esito positivo il corso in e-learning
             </p>
-            <h2 className="mt-2 text-2xl font-bold italic text-emerald-800 max-w-2xl leading-snug">
+            <h2 className="mt-1 text-xl font-bold italic text-emerald-800 max-w-2xl leading-snug">
               "Il Regolamento europeo in materia di protezione dei dati personali"
             </h2>
-            <p className="mt-1 text-sm font-medium text-slate-700">
+            <p className="mt-1 text-xs font-medium text-slate-700">
               General Data Protection Regulation (GDPR) — Regolamento UE 2016/679
             </p>
-            <p className="mt-1 text-sm font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
+            <p className="mt-1 text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
               Guida Pratica per l'Addetto e l'Incaricato
             </p>
 
-            <div className="mt-8 w-full flex justify-between items-end pt-4 text-sm">
+            <p className="mt-3 max-w-3xl text-[10.5px] italic text-slate-700 leading-snug px-4">
+              La formazione è stata erogata da <strong>{dittaUpper}</strong> e
+              sviluppata in coerenza con il programma generale e con le
+              direttive operative, le procedure, le nomine e le informative
+              emanate dal Titolare e dal Responsabile Privacy; pertanto il
+              presente attestato è valido esclusivamente come supporto al
+              sistema privacy adottato dalla società{" "}
+              <strong>{dittaUpper}</strong>.
+            </p>
+
+            <div className="mt-4 w-full flex justify-between items-end pt-2 text-sm">
               <div className="text-left">
-                <p className="text-slate-600">Data di rilascio</p>
+                <p className="text-slate-600 text-xs">Data di rilascio</p>
                 <p className="font-semibold">{oggi}</p>
               </div>
               <div className="text-right">
