@@ -91,7 +91,7 @@ function RootComponent() {
     <>
       <button
         onClick={handleReset}
-        className="fixed top-3 right-3 z-[9999] flex items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive shadow-sm hover:bg-destructive/20 print:hidden"
+        className="fixed bottom-3 left-3 z-[9999] flex items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive shadow-sm hover:bg-destructive/20 print:hidden"
         title="Resetta primo accesso"
       >
         <RotateCcw className="h-3.5 w-3.5" />
