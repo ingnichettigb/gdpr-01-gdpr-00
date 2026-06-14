@@ -4,7 +4,18 @@ import { isLessonCompleted } from "@/components/VideoLesson";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Lock, PlayCircle, FileText, ListChecks } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  CheckCircle2,
+  Lock,
+  PlayCircle,
+  FileText,
+  ListChecks,
+  Award,
+  AlertTriangle,
+} from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -17,10 +28,196 @@ export const Route = createFileRoute("/")({
       },
     ],
   }),
-  component: DashboardPage,
+  component: HomePage,
 });
 
-function DashboardPage() {
+const STORAGE_KEY = "attestato_data";
+const PREFILL_KEY = "attestato_prefill";
+
+type Data = {
+  nome: string;
+  luogo: string;
+  dataNascita: string;
+  cf: string;
+  ditta: string;
+};
+
+const emptyData: Data = {
+  nome: "",
+  luogo: "",
+  dataNascita: "",
+  cf: "",
+  ditta: "",
+};
+
+function HomePage() {
+  const [ready, setReady] = useState(false);
+  const [hasData, setHasData] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.nome && parsed.cf && parsed.ditta) {
+          setHasData(true);
+        }
+      } catch {
+        // ignore
+      }
+    }
+    setReady(true);
+  }, []);
+
+  if (!ready) return null;
+
+  if (!hasData) {
+    return <OnboardingForm onDone={() => setHasData(true)} />;
+  }
+
+  return <Dashboard />;
+}
+
+function OnboardingForm({ onDone }: { onDone: () => void }) {
+  const [form, setForm] = useState<Data>(emptyData);
+  const [accepted, setAccepted] = useState(false);
+  const [prefilled, setPrefilled] = useState(false);
+
+  useEffect(() => {
+    const prefill = localStorage.getItem(PREFILL_KEY);
+    if (prefill) {
+      try {
+        const parsed = JSON.parse(prefill);
+        if (parsed && typeof parsed === "object") {
+          setForm({
+            nome: parsed.nome ?? "",
+            luogo: parsed.luogo ?? "",
+            dataNascita: parsed.dataNascita ?? "",
+            cf: (parsed.cf ?? "").toUpperCase(),
+            ditta: parsed.ditta ?? "",
+          });
+          setAccepted(true);
+          setPrefilled(true);
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
+
+  return (
+    <main className="min-h-screen bg-background flex items-center justify-center px-4 py-10">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!form.nome.trim() || !form.cf.trim() || !form.ditta.trim() || !accepted) return;
+          const payload: Data = { ...form, cf: form.cf.toUpperCase() };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+          localStorage.removeItem(PREFILL_KEY);
+          onDone();
+        }}
+        className="w-full max-w-md space-y-5 rounded-xl border bg-card p-6"
+      >
+        <div className="text-center space-y-2">
+          <Award className="h-10 w-10 mx-auto text-primary" />
+          <h1 className="text-2xl font-bold">Benvenuto nel corso Privacy</h1>
+          <p className="text-sm text-muted-foreground">
+            Inserisci i tuoi dati per iniziare. Verranno utilizzati per
+            generare l'attestato al termine del corso.
+          </p>
+          {prefilled && (
+            <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-1">
+              Abbiamo precompilato i campi con i dati del tuo precedente
+              accesso. Verifica e conferma per procedere.
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="nome">Nome e cognome</Label>
+          <Input
+            id="nome"
+            required
+            value={form.nome}
+            onChange={(e) => setForm({ ...form, nome: e.target.value })}
+            placeholder="Mario Rossi"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="ditta">Nome della ditta</Label>
+          <Input
+            id="ditta"
+            required
+            value={form.ditta}
+            onChange={(e) => setForm({ ...form, ditta: e.target.value })}
+            placeholder="ACME S.r.l."
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="luogo">Luogo di nascita</Label>
+          <Input
+            id="luogo"
+            value={form.luogo}
+            onChange={(e) => setForm({ ...form, luogo: e.target.value })}
+            placeholder="Milano"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="dataNascita">Data di nascita</Label>
+          <Input
+            id="dataNascita"
+            type="date"
+            value={form.dataNascita}
+            onChange={(e) => setForm({ ...form, dataNascita: e.target.value })}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="cf">Codice Fiscale</Label>
+          <Input
+            id="cf"
+            required
+            value={form.cf}
+            onChange={(e) =>
+              setForm({ ...form, cf: e.target.value.toUpperCase() })
+            }
+            placeholder="RSSMRA85T10A562S"
+            style={{ textTransform: "uppercase" }}
+            maxLength={16}
+          />
+        </div>
+
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-[13px] text-amber-900 flex gap-2">
+          <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+          <div>
+            I dati inseriti sono sotto la <strong>responsabilità esclusiva
+            dello scrivente</strong>. Eventuali errori di digitazione
+            <strong> non potranno essere corretti</strong> una volta generato
+            l'attestato. Verificare attentamente nome, codice fiscale e nome
+            della ditta prima di proseguire.
+          </div>
+        </div>
+
+        <div className="flex items-start gap-2">
+          <Checkbox
+            id="accept"
+            checked={accepted}
+            onCheckedChange={(v) => setAccepted(v === true)}
+          />
+          <Label htmlFor="accept" className="text-sm leading-snug font-normal">
+            Confermo di aver verificato i dati e accetto la responsabilità di
+            quanto inserito.
+          </Label>
+        </div>
+
+        <Button type="submit" className="w-full" disabled={!accepted}>
+          Conferma e inizia il corso
+        </Button>
+      </form>
+    </main>
+  );
+}
+
+function Dashboard() {
   const [c1, setC1] = useState(false);
   const [c2, setC2] = useState(false);
 
