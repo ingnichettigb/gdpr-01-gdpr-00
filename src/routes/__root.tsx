@@ -68,9 +68,11 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   const handleReset = () => {
     if (typeof window === "undefined") return;
-    if (!window.confirm("Sei sicuro di voler resettare il primo accesso? Verranno cancellati tutti i dati e i progressi del corso.")) {
+    if (!window.confirm("Sei sicuro di voler resettare il primo accesso? Verranno cancellati tutti i dati e i progressi del corso. I tuoi dati anagrafici verranno proposti di nuovo per essere confermati.")) {
       return;
     }
+    // Preserve last entered user data to prefill the onboarding form
+    const lastData = localStorage.getItem("attestato_data");
     // Clear all local and session storage
     localStorage.clear();
     sessionStorage.clear();
@@ -83,7 +85,11 @@ function RootComponent() {
       document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
       document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;domain=" + window.location.hostname + ";";
     }
-    // Hard reload to initial page
+    // Restore last data as prefill so the user can quickly confirm
+    if (lastData) {
+      localStorage.setItem("attestato_prefill", lastData);
+    }
+    // Hard reload to initial onboarding page
     window.location.href = "/";
   };
 
