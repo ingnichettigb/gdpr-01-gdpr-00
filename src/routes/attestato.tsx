@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Printer, RotateCw } from "lucide-react";
+import { AlertTriangle, Download, RotateCw } from "lucide-react";
+import { generateAttestatoPdf } from "@/lib/generateAttestatoPdf";
 
 export const Route = createFileRoute("/attestato")({
   head: () => ({
