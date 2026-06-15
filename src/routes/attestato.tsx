@@ -184,6 +184,12 @@ function AttestatoPage() {
             <p className="mt-1 text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
               Guida Pratica per l'Addetto e l'Incaricato
             </p>
+            {certNumber && (
+              <p className="mt-2 text-xs font-bold tracking-wider text-slate-800">
+                Certificato n. {certNumber}
+              </p>
+            )}
+
 
             <p className="mt-3 max-w-3xl text-[10.5px] italic text-slate-700 leading-snug px-4">
               La formazione è stata erogata da <strong>{dittaUpper}</strong> e
