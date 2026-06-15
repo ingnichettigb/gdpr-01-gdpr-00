@@ -34,6 +34,7 @@ function AttestatoPage() {
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [data, setData] = useState<Data | null>(null);
   const [flipped, setFlipped] = useState(false);
+  const [certNumber, setCertNumber] = useState<string>("");
 
   useEffect(() => {
     const passed = localStorage.getItem(PASSED_KEY) === "true";
@@ -49,6 +50,14 @@ function AttestatoPage() {
         // ignore
       }
     }
+    let cert = localStorage.getItem("attestato_cert_number");
+    if (!cert && passed) {
+      const d = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      cert = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+      localStorage.setItem("attestato_cert_number", cert);
+    }
+    if (cert) setCertNumber(cert);
   }, []);
 
   if (allowed === null) return null;
