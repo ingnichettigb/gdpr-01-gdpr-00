@@ -115,9 +115,21 @@ function AttestatoPage() {
               <RotateCw className="h-4 w-4 mr-2" />
               {flipped ? "Mostra fronte" : "Mostra retro"}
             </Button>
-            <Button onClick={() => window.print()}>
-              <Printer className="h-4 w-4 mr-2" />
-              Stampa / PDF
+            <Button
+              onClick={() =>
+                data &&
+                generateAttestatoPdf({
+                  nome: data.nome,
+                  luogo: data.luogo,
+                  dataNascita: data.dataNascita,
+                  cf: data.cf,
+                  ditta: data.ditta,
+                  certNumber,
+                })
+              }
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Scarica PDF
             </Button>
           </div>
         </div>
