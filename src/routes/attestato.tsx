@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Printer, RotateCw } from "lucide-react";
+import { AlertTriangle, Download, RotateCw } from "lucide-react";
+import { generateAttestatoPdf } from "@/lib/generateAttestatoPdf";
 
 export const Route = createFileRoute("/attestato")({
   head: () => ({
@@ -33,6 +34,7 @@ function AttestatoPage() {
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [data, setData] = useState<Data | null>(null);
   const [flipped, setFlipped] = useState(false);
+  const [certNumber, setCertNumber] = useState<string>("");
 
   useEffect(() => {
     const passed = localStorage.getItem(PASSED_KEY) === "true";
@@ -48,6 +50,14 @@ function AttestatoPage() {
         // ignore
       }
     }
+    let cert = localStorage.getItem("attestato_cert_number");
+    if (!cert && passed) {
+      const d = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      cert = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+      localStorage.setItem("attestato_cert_number", cert);
+    }
+    if (cert) setCertNumber(cert);
   }, []);
 
   if (allowed === null) return null;
@@ -105,9 +115,21 @@ function AttestatoPage() {
               <RotateCw className="h-4 w-4 mr-2" />
               {flipped ? "Mostra fronte" : "Mostra retro"}
             </Button>
-            <Button onClick={() => window.print()}>
-              <Printer className="h-4 w-4 mr-2" />
-              Stampa / PDF
+            <Button
+              onClick={() =>
+                data &&
+                generateAttestatoPdf({
+                  nome: data.nome,
+                  luogo: data.luogo,
+                  dataNascita: data.dataNascita,
+                  cf: data.cf,
+                  ditta: data.ditta,
+                  certNumber,
+                })
+              }
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Scarica PDF
             </Button>
           </div>
         </div>
@@ -162,6 +184,12 @@ function AttestatoPage() {
             <p className="mt-1 text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
               Guida Pratica per l'Addetto e l'Incaricato
             </p>
+            {certNumber && (
+              <p className="mt-2 text-xs font-bold tracking-wider text-slate-800">
+                Certificato n. {certNumber}
+              </p>
+            )}
+
 
             <p className="mt-3 max-w-3xl text-[10.5px] italic text-slate-700 leading-snug px-4">
               La formazione è stata erogata da <strong>{dittaUpper}</strong> e
