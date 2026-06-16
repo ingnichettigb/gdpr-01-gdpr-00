@@ -5,6 +5,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { isLessonCompleted } from "@/components/VideoLesson";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/test")({
   head: () => ({
@@ -110,7 +111,7 @@ function TestPage() {
         </header>
 
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
             setSubmitted(true);
             const finalScore = QUESTIONS.reduce(
@@ -124,6 +125,42 @@ function TestPage() {
                 const pad = (n: number) => String(n).padStart(2, "0");
                 const cert = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
                 localStorage.setItem("attestato_cert_number", cert);
+
+                // Persist certificate to Supabase (immutable record)
+                try {
+                  const raw = localStorage.getItem("attestato_data");
+                  const a = raw ? JSON.parse(raw) : null;
+                  if (a && a.licenseId) {
+                    const { data: inserted, error: insErr } = await supabase
+                      .from("certificates")
+                      .insert({
+                        certificate_number: cert,
+                        license_id: a.licenseId,
+                        license_key: a.licenseKey ?? null,
+                        nome_snapshot: a.nome ?? null,
+                        cf_snapshot: (a.cf ?? "").toUpperCase() || null,
+                        ditta_snapshot: a.ditta ?? null,
+                        luogo_nascita_snapshot: a.luogo || null,
+                        data_nascita_snapshot: a.dataNascita || null,
+                      })
+                      .select("id, issued_at")
+                      .single();
+                    if (insErr) {
+                      console.error("Errore salvataggio certificato:", insErr);
+                    } else if (inserted) {
+                      localStorage.setItem(
+                        "attestato_cert_id",
+                        inserted.id,
+                      );
+                      localStorage.setItem(
+                        "attestato_issued_at",
+                        inserted.issued_at,
+                      );
+                    }
+                  }
+                } catch (err) {
+                  console.error("Eccezione durante salvataggio:", err);
+                }
               }
             }
             window.scrollTo({ top: 0, behavior: "smooth" });

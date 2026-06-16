@@ -7,6 +7,7 @@ export type AttestatoData = {
   cf: string;
   ditta: string;
   certNumber: string;
+  issuedAt?: string;
 };
 
 const EMERALD: [number, number, number] = [0.027, 0.42, 0.302]; // ~ emerald-700
@@ -132,7 +133,8 @@ export async function generateAttestatoPdf(data: AttestatoData): Promise<void> {
   const [W, H] = [PageSizes.A4[1], PageSizes.A4[0]];
   const dittaUpper = data.ditta.toUpperCase();
   const cfUpper = data.cf.toUpperCase();
-  const oggi = new Date().toLocaleDateString("it-IT", {
+  const issuedDate = data.issuedAt ? new Date(data.issuedAt) : new Date();
+  const oggi = issuedDate.toLocaleDateString("it-IT", {
     day: "2-digit",
     month: "long",
     year: "numeric",
