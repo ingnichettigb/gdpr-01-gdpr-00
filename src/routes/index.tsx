@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { supabase } from "@/integrations/supabase/client";
 import {
   CheckCircle2,
   Lock,
@@ -15,6 +16,7 @@ import {
   ListChecks,
   Award,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -40,6 +42,8 @@ type Data = {
   dataNascita: string;
   cf: string;
   ditta: string;
+  licenseKey: string;
+  licenseId: string;
 };
 
 const emptyData: Data = {
@@ -48,6 +52,8 @@ const emptyData: Data = {
   dataNascita: "",
   cf: "",
   ditta: "",
+  licenseKey: "",
+  licenseId: "",
 };
 
 function HomePage() {
@@ -59,7 +65,7 @@ function HomePage() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed && parsed.nome && parsed.cf && parsed.ditta) {
+        if (parsed && parsed.nome && parsed.cf && parsed.ditta && parsed.licenseId) {
           setHasData(true);
         }
       } catch {
@@ -82,6 +88,8 @@ function OnboardingForm({ onDone }: { onDone: () => void }) {
   const [form, setForm] = useState<Data>(emptyData);
   const [accepted, setAccepted] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
+  const [validating, setValidating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const prefill = localStorage.getItem(PREFILL_KEY);
@@ -95,6 +103,8 @@ function OnboardingForm({ onDone }: { onDone: () => void }) {
             dataNascita: parsed.dataNascita ?? "",
             cf: (parsed.cf ?? "").toUpperCase(),
             ditta: parsed.ditta ?? "",
+            licenseKey: parsed.licenseKey ?? "",
+            licenseId: parsed.licenseId ?? "",
           });
           setAccepted(true);
           setPrefilled(true);
@@ -108,13 +118,58 @@ function OnboardingForm({ onDone }: { onDone: () => void }) {
   return (
     <main className="min-h-screen bg-background flex items-center justify-center px-4 py-10">
       <form
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          if (!form.nome.trim() || !form.cf.trim() || !form.ditta.trim() || !accepted) return;
-          const payload: Data = { ...form, cf: form.cf.toUpperCase() };
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-          localStorage.removeItem(PREFILL_KEY);
-          onDone();
+          setError(null);
+          if (
+            !form.nome.trim() ||
+            !form.cf.trim() ||
+            !form.ditta.trim() ||
+            !form.licenseKey.trim() ||
+            !accepted
+          )
+            return;
+
+          setValidating(true);
+          try {
+            const key = form.licenseKey.trim();
+            const { data: lic, error: dbErr } = await supabase
+              .from("licenses")
+              .select("id, is_active, expires_at")
+              .eq("license_key", key)
+              .maybeSingle();
+
+            if (dbErr) {
+              setError(
+                "Errore di rete durante la verifica della licenza. Riprova.",
+              );
+              return;
+            }
+            if (!lic) {
+              setError("Codice licenza non trovato. Controlla e riprova.");
+              return;
+            }
+            if (lic.is_active === false) {
+              setError("Questa licenza non è attiva.");
+              return;
+            }
+            if (lic.expires_at && new Date(lic.expires_at) < new Date()) {
+              setError("Questa licenza è scaduta.");
+              return;
+            }
+
+            const payload: Data = {
+              ...form,
+              cf: form.cf.toUpperCase(),
+              licenseKey: key,
+              licenseId: lic.id,
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+            localStorage.removeItem(PREFILL_KEY);
+            onDone();
+          } finally {
+            setValidating(false);
+          }
         }}
         className="w-full max-w-md space-y-5 rounded-xl border bg-card p-6"
       >
@@ -131,6 +186,20 @@ function OnboardingForm({ onDone }: { onDone: () => void }) {
               accesso. Verifica e conferma per procedere.
             </p>
           )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="licenseKey">Codice licenza</Label>
+          <Input
+            id="licenseKey"
+            required
+            value={form.licenseKey}
+            onChange={(e) =>
+              setForm({ ...form, licenseKey: e.target.value.trim() })
+            }
+            placeholder="Inserisci il codice licenza fornito"
+            autoComplete="off"
+          />
         </div>
 
         <div className="space-y-2">
@@ -209,8 +278,25 @@ function OnboardingForm({ onDone }: { onDone: () => void }) {
           </Label>
         </div>
 
-        <Button type="submit" className="w-full" disabled={!accepted}>
-          Conferma e inizia il corso
+        {error && (
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={!accepted || validating}
+        >
+          {validating ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Verifica licenza…
+            </>
+          ) : (
+            "Conferma e inizia il corso"
+          )}
         </Button>
       </form>
     </main>

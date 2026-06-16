@@ -35,6 +35,7 @@ function AttestatoPage() {
   const [data, setData] = useState<Data | null>(null);
   const [flipped, setFlipped] = useState(false);
   const [certNumber, setCertNumber] = useState<string>("");
+  const [issuedAt, setIssuedAt] = useState<string>("");
 
   useEffect(() => {
     const passed = localStorage.getItem(PASSED_KEY) === "true";
@@ -58,6 +59,8 @@ function AttestatoPage() {
       localStorage.setItem("attestato_cert_number", cert);
     }
     if (cert) setCertNumber(cert);
+    const iss = localStorage.getItem("attestato_issued_at");
+    if (iss) setIssuedAt(iss);
   }, []);
 
   if (allowed === null) return null;
@@ -95,7 +98,7 @@ function AttestatoPage() {
     );
   }
 
-  const oggi = new Date().toLocaleDateString("it-IT", {
+  const oggi = (issuedAt ? new Date(issuedAt) : new Date()).toLocaleDateString("it-IT", {
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -125,6 +128,7 @@ function AttestatoPage() {
                   cf: data.cf,
                   ditta: data.ditta,
                   certNumber,
+                  issuedAt,
                 })
               }
             >
