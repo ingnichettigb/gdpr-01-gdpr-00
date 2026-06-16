@@ -1,44 +1,109 @@
-# Piano: Numero certificato + Download PDF protetto
+# Piano: salvare numero certificato su Supabase con licenza
 
-## Obiettivo
-1. Generare un numero certificato univoco (formato `AAAAMMGGHHmmss`) al momento del superamento del test.
-2. Mostrarlo sul fronte dell'attestato sotto "Guida Pratica per l'Addetto e l'Incaricato".
-3. Sostituire il bottone "Stampa / PDF" con "Scarica PDF" che genera un vero PDF in **sola lettura** (non modificabile) includendo **tutti** i testi visibili a video — incluso il paragrafo "La formazione è stata erogata da {DITTA}…" che oggi manca nella stampa.
+## 1. Connessione al Supabase esistente
 
-## Modifiche
+Il progetto attualmente NON è collegato a nessun backend (solo localStorage). Per collegarlo al tuo Supabase esistente mi servono **2 valori** che mi devi incollare in chat:
 
-### 1. `src/routes/test.tsx`
-Al momento in cui viene impostato `test_passed = true`, generare e salvare il numero certificato:
-- Chiave localStorage: `attestato_cert_number`
-- Solo se non già presente (così non cambia se l'utente riapre il test).
-- Formato: `AAAAMMGGHHmmss` (es. `20260615142307`) calcolato da `new Date()` locale.
+1. **Project URL** — es. `https://xxxxx.supabase.co` (Supabase Dashboard → Project Settings → API → Project URL)
+2. **Publishable / anon key** — la chiave `anon public` (Settings → API → Project API keys → `anon` `public`)
 
-### 2. `src/routes/attestato.tsx`
-- Leggere `attestato_cert_number` da localStorage. Fallback: se manca (utente vecchio), generarlo al volo alla prima apertura e salvarlo.
-- Renderizzare sul **fronte**, subito sotto la riga gialla "Guida Pratica per l'Addetto e l'Incaricato":
-  `Certificato n. {NUMERO}`
-- Sostituire il bottone "Stampa / PDF" con **"Scarica PDF"** (icona Download). Rimuovere `window.print()` e il blocco `<style>` con le print rules (non più necessari).
-- Il bottone chiama la funzione di generazione PDF.
+⚠️ NON inviare la `service_role` key. È segreta e non serve lato app.
 
-### 3. Nuovo file `src/lib/generateAttestatoPdf.ts`
-Funzione client-side che usa **`pdf-lib`** per costruire un PDF A4 landscape a 2 pagine:
-- **Pagina 1 (Fronte)**: header "Corporate Boost Service", titolo "Attestato di Partecipazione", nome, CF, luogo/data nascita, descrizione corso, titolo corso GDPR, "Guida Pratica…", **"Certificato n. {NUMERO}"**, **paragrafo completo "La formazione è stata erogata da {DITTA}…società {DITTA}"** (con word-wrap), data rilascio, firma "Corporate Boost Service".
-- **Pagina 2 (Retro)**: titolo "Argomenti del Corso", i 7 gruppi di argomenti con elenchi puntati, footer con data.
-- Bordi doppi verde smeraldo per coerenza visiva.
-- **Protezione sola lettura** via `PDFDocument.save({ useObjectStreams: false })` + encrypt:
-  - User password: vuota (apertura libera)
-  - Owner password: stringa random
-  - Permessi: solo `printing` consentito; **negati**: `modifying`, `copying`, `annotating`, `fillingForms`, `contentAccessibility`, `documentAssembly`.
-- Download via `Blob` + `<a download>` con nome `Attestato_{NOME_SLUG}_{CERT}.pdf`.
+Creerò:
+- `src/integrations/supabase/client.ts` con quei valori
+- `package.json`: `bun add @supabase/supabase-js`
 
-### 4. `package.json`
-Aggiungere dipendenza `pdf-lib` (`bun add pdf-lib`).
+## 2. Migration SQL (te la fornisco da eseguire nel tuo Supabase)
 
-## Dettagli tecnici
-- Numero certificato: `const pad = (n:number)=>String(n).padStart(2,'0'); const d=new Date(); const cert = ${'`${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`'};`
-- `pdf-lib` è puro JS, funziona client-side, supporta encryption con permessi.
-- Font: Helvetica/Helvetica-Bold (standard pdf-lib, no embedding necessario).
-- Reset Primo Accesso: continua a cancellare tutto incluso `attestato_cert_number` (già coperto da `localStorage.clear()`).
+Visto che il DB non è gestito da Lovable, ti darò lo script SQL da incollare nel SQL Editor del tuo Supabase:
 
-## Domande aperte
-Nessuna — procedo con queste scelte.
+```sql
+-- A) Nuove colonne immutabili su public.certificates
+ALTER TABLE public.certificates
+  ADD COLUMN IF NOT EXISTS certificate_number text UNIQUE,
+  ADD COLUMN IF NOT EXISTS license_id uuid REFERENCES public.licenses(id),
+  ADD COLUMN IF NOT EXISTS license_key  text,
+  ADD COLUMN IF NOT EXISTS nome_snapshot text,
+  ADD COLUMN IF NOT EXISTS cf_snapshot   text,
+  ADD COLUMN IF NOT EXISTS ditta_snapshot text,
+  ADD COLUMN IF NOT EXISTS luogo_nascita_snapshot text,
+  ADD COLUMN IF NOT EXISTS data_nascita_snapshot date;
+
+-- user_id e course_id sono NOT NULL nello schema attuale ma non abbiamo
+-- login: li rendiamo nullable per permettere l'inserimento anonimo
+ALTER TABLE public.certificates
+  ALTER COLUMN user_id DROP NOT NULL,
+  ALTER COLUMN course_id DROP NOT NULL,
+  ALTER COLUMN pdf_url DROP NOT NULL;
+
+-- B) Trigger immutabilità: blocca UPDATE su certificate_number / issued_at
+CREATE OR REPLACE FUNCTION public.certificates_immutable_fields()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.certificate_number IS DISTINCT FROM OLD.certificate_number
+     OR NEW.issued_at IS DISTINCT FROM OLD.issued_at
+     OR NEW.license_id IS DISTINCT FROM OLD.license_id
+     OR NEW.cf_snapshot IS DISTINCT FROM OLD.cf_snapshot
+     OR NEW.nome_snapshot IS DISTINCT FROM OLD.nome_snapshot THEN
+    RAISE EXCEPTION 'Campi del certificato non modificabili dopo l''emissione';
+  END IF;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_certificates_immutable ON public.certificates;
+CREATE TRIGGER trg_certificates_immutable
+  BEFORE UPDATE ON public.certificates
+  FOR EACH ROW EXECUTE FUNCTION public.certificates_immutable_fields();
+
+-- C) RLS: insert pubblico, no update/delete dall'app
+ALTER TABLE public.certificates ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "anon insert cert" ON public.certificates;
+CREATE POLICY "anon insert cert" ON public.certificates
+  FOR INSERT TO anon, authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon read own cert" ON public.certificates;
+CREATE POLICY "anon read own cert" ON public.certificates
+  FOR SELECT TO anon, authenticated USING (true);
+
+GRANT SELECT, INSERT ON public.certificates TO anon, authenticated;
+GRANT SELECT ON public.licenses TO anon, authenticated;
+```
+
+> Sulla `licenses` serve almeno il SELECT per anon per poter validare la `license_key`. Se preferisci che la validazione passi da una RPC `security definer` (più sicura, non espone la tabella), dimmelo e cambio approccio.
+
+## 3. Modifiche all'app
+
+### `src/routes/index.tsx` (form iniziale)
+Aggiungo campo **"Codice licenza"** (obbligatorio). Al submit:
+- `supabase.from('licenses').select('id, is_active, expires_at').eq('license_key', key).maybeSingle()`
+- Se non trovata / non attiva / scaduta → errore inline, non si procede.
+- Salvo `license_id` e `license_key` in `localStorage` insieme agli altri dati.
+
+### `src/routes/test.tsx` (al superamento)
+Quando `test_passed = true` e non esiste già un cert:
+1. Genero `certificate_number = AAAAMMGGHHmmss` (come ora).
+2. INSERT su `public.certificates` con:
+   - `certificate_number`, `license_id`, `license_key`
+   - `nome_snapshot`, `cf_snapshot`, `ditta_snapshot`, `luogo_nascita_snapshot`, `data_nascita_snapshot`
+   - `issued_at = now()` (server-side default)
+3. Rileggo `issued_at` dal record inserito e salvo `attestato_cert_number` + `attestato_issued_at` in `localStorage`.
+4. In caso di errore DB: mostro alert ma comunque salvo localmente, così l'utente non resta bloccato.
+
+### `src/routes/attestato.tsx`
+- Usa **sempre** `attestato_cert_number` e `attestato_issued_at` da localStorage (popolati dal test). La data nel PDF/UI diventa `issued_at` del DB (non `new Date()` corrente), così non cambia mai.
+- Il PDF mantiene il numero esistente.
+
+### `src/lib/generateAttestatoPdf.ts`
+- Riceve `issuedAt: string` come parametro e lo usa al posto di `new Date()`.
+
+## 4. Cosa NON faccio
+- Non tocco `user_id` (resta nullable senza login).
+- Non creo nuovi `auth.users`.
+- Non cambio lo schema di `licenses` né di altre tabelle.
+
+## 5. Domande residue
+- Va bene esporre SELECT su `licenses` ad `anon` (limitato a id/stato) o preferisci una **RPC `validate_license(key)`** che ritorna solo `{ valid, license_id }`? **Più sicura ma richiede 1 funzione SQL in più.**
+- Il **course_id** lo lascio NULL o vuoi che inserisca un UUID fisso del corso GDPR (allora dimmi quale riga di `public.courses` usare)?
+
+Appena mi confermi (e mi passi URL + anon key) procedo.
