@@ -90,6 +90,7 @@ function OnboardingForm({ onDone }: { onDone: () => void }) {
   const [prefilled, setPrefilled] = useState(false);
   const [validating, setValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bypassClicks, setBypassClicks] = useState(0);
 
   useEffect(() => {
     const prefill = localStorage.getItem(PREFILL_KEY);
