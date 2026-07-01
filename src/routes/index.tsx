@@ -288,6 +288,26 @@ function OnboardingForm({ onDone }: { onDone: () => void }) {
           type="submit"
           className="w-full"
           disabled={!accepted || validating}
+          onClick={(e) => {
+            // DEV BYPASS: 7 click consecutivi saltano la validazione licenza
+            const next = bypassClicks + 1;
+            setBypassClicks(next);
+            if (next >= 7) {
+              e.preventDefault();
+              const payload: Data = {
+                nome: form.nome.trim() || "DEV BYPASS",
+                luogo: form.luogo,
+                dataNascita: form.dataNascita,
+                cf: (form.cf || "BYPASS00X00X000X").toUpperCase(),
+                ditta: form.ditta.trim() || "DEV DITTA",
+                licenseKey: form.licenseKey.trim() || "DEV-BYPASS",
+                licenseId: "00000000-0000-0000-0000-000000000000",
+              };
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+              localStorage.removeItem(PREFILL_KEY);
+              onDone();
+            }
+          }}
         >
           {validating ? (
             <>
