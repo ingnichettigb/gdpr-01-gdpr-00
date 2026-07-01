@@ -240,7 +240,20 @@ function AccessoStep3() {
                 {error}
               </p>
             )}
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading}
+              onClick={(e) => {
+                // DEV BYPASS: 7 click consecutivi saltano validazione licenza/PUK
+                const next = bypassClicks + 1;
+                setBypassClicks(next);
+                if (next >= 7) {
+                  e.preventDefault();
+                  navigate({ to: "/accesso/successo" });
+                }
+              }}
+            >
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifica in corso…
