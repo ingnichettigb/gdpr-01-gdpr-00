@@ -25,6 +25,7 @@ function AccessoStep3() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bypassClicks, setBypassClicks] = useState(0);
 
   useEffect(() => {
     (async () => {
