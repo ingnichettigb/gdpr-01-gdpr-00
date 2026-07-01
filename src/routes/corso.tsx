@@ -39,14 +39,15 @@ function CorsoPage() {
     else if (done1 && done2) setActive("test");
   }, []);
 
-  // Quando si completa un modulo dall'interno, avanza automaticamente
+  // Avanza automaticamente solo alla TRANSIZIONE da non-completato a completato
+  // (non al semplice re-mount di un modulo già superato)
   const handleC1 = (done: boolean) => {
+    if (done && !c1 && active === "mod1") setActive("mod2");
     setC1(done);
-    if (done && active === "mod1") setActive("mod2");
   };
   const handleC2 = (done: boolean) => {
+    if (done && !c2 && active === "mod2") setActive("test");
     setC2(done);
-    if (done && active === "mod2") setActive("test");
   };
 
   const steps: {
