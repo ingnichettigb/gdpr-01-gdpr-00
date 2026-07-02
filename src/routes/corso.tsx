@@ -41,13 +41,19 @@ function CorsoPage() {
 
   // Avanza automaticamente solo alla TRANSIZIONE da non-completato a completato
   // (non al semplice re-mount di un modulo già superato)
+  // Il completamento è monodirezionale: ignoriamo le notifiche `false`
+  // (che il child emette al mount prima di leggere localStorage), altrimenti
+  // aprendo un modulo già superato azzereremmo lo stato e ri-scateneremmo
+  // l'auto-avanzamento.
   const handleC1 = (done: boolean) => {
-    if (done && !c1 && active === "mod1") setActive("mod2");
-    setC1(done);
+    if (!done) return;
+    if (!c1 && active === "mod1") setActive("mod2");
+    setC1(true);
   };
   const handleC2 = (done: boolean) => {
-    if (done && !c2 && active === "mod2") setActive("test");
-    setC2(done);
+    if (!done) return;
+    if (!c2 && active === "mod2") setActive("test");
+    setC2(true);
   };
 
   const steps: {
