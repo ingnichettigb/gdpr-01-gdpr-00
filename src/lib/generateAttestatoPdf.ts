@@ -194,7 +194,7 @@ export async function generateAttestatoPdf(data: AttestatoData): Promise<void> {
     });
   };
 
-  let y = H - 70;
+  let y = H - 145;
 
   centerText(p1, "CORPORATE BOOST SERVICE", y, 9, fontBold, EMERALD);
   y -= 28;
@@ -247,7 +247,7 @@ export async function generateAttestatoPdf(data: AttestatoData): Promise<void> {
 
   // Amber pill
   y -= 18;
-  const pillText = "Guida Pratica per l'Addetto e l'Incaricato";
+  const pillText = "Guida Pratica per l'Addetto e l'Incaricato — 1 h";
   const pillW = fontBold.widthOfTextAtSize(pillText, 10) + 16;
   p1.drawRectangle({
     x: (W - pillW) / 2,
