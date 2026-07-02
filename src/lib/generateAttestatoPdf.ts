@@ -1,4 +1,5 @@
-import { PDFDocument, StandardFonts, rgb, PageSizes } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, degrees, PageSizes } from "pdf-lib";
+import timbroAsset from "@/assets/timbro_corporate.png.asset.json";
 
 export type AttestatoData = {
   nome: string;
@@ -300,6 +301,26 @@ export async function generateAttestatoPdf(data: AttestatoData): Promise<void> {
   const sig = "Corporate Boost Service";
   const sigW = fontBold.widthOfTextAtSize(sig, 11);
   const sigX = W - 60 - sigW;
+
+  // Stamp above the signature
+  try {
+    const stampResp = await fetch(timbroAsset.url);
+    const stampBytes = await stampResp.arrayBuffer();
+    const stampImg = await pdfDoc.embedPng(stampBytes);
+    const stampW = 130;
+    const stampH = (stampImg.height / stampImg.width) * stampW;
+    p1.drawImage(stampImg, {
+      x: sigX + sigW / 2 - stampW / 2 + 10,
+      y: footerY + 18,
+      width: stampW,
+      height: stampH,
+      rotate: degrees(-6),
+      opacity: 0.9,
+    });
+  } catch {
+    // ignore stamp failure
+  }
+
   p1.drawLine({
     start: { x: sigX - 10, y: footerY + 14 },
     end: { x: sigX + sigW + 10, y: footerY + 14 },
