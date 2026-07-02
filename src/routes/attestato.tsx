@@ -212,7 +212,12 @@ function AttestatoPage() {
                 <p className="text-slate-600 text-xs">Data di rilascio</p>
                 <p className="font-semibold">{oggi}</p>
               </div>
-              <div className="text-right">
+              <div className="text-right relative">
+                <img
+                  src={timbroAsset.url}
+                  alt="Timbro Corporate Boost Service"
+                  className="absolute -top-16 right-2 w-28 opacity-90 -rotate-6 pointer-events-none select-none"
+                />
                 <p className="border-t border-slate-400 pt-1 px-6 font-semibold">
                   Corporate Boost Service
                 </p>
