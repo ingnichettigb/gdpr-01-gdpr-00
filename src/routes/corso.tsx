@@ -195,42 +195,17 @@ function CorsoPage() {
                       {inner}
                     </Link>
                   ) : (
-                  <button
-                    type="button"
-                    onClick={() => clickable && setActive(s.key)}
-                    disabled={!clickable}
-                    aria-current={isActive ? "step" : undefined}
-                    className={cn(
-                      "relative w-40 text-left rounded-lg border p-3 transition-all",
-                      "flex flex-col gap-1",
-                      isActive
-                        ? "border-2 shadow-md bg-card"
-                        : "border-border bg-card/60 hover:bg-card",
-                      !clickable && "opacity-50 cursor-not-allowed hover:bg-card/60",
-                    )}
-                    style={isActive ? { borderColor: "#003153" } : undefined}
-                  >
-                    <div className="flex items-center justify-between">
-                      <Icon
-                        className="h-5 w-5"
-                        style={{ color: clickable ? "#003153" : undefined }}
-                      />
-                      {s.completed ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      ) : !clickable ? (
-                        <Lock className="h-4 w-4 text-muted-foreground" />
-                      ) : null}
-                    </div>
-                    <div
-                      className="text-sm font-semibold"
-                      style={{ color: "#003153" }}
+                    <button
+                      type="button"
+                      onClick={() => clickable && setActive(s.key)}
+                      disabled={!clickable}
+                      aria-current={isActive ? "step" : undefined}
+                      className={cardClass}
+                      style={cardStyle}
                     >
-                      {s.label}
-                    </div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {s.subtitle}
-                    </div>
-                  </button>
+                      {inner}
+                    </button>
+                  )}
                 </li>
               );
             })}
