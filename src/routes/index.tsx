@@ -319,7 +319,15 @@ function OnboardingForm({ onDone }: { onDone: () => void }) {
             "Conferma e inizia il corso"
           )}
         </Button>
+
+        <p className="text-center text-sm text-muted-foreground pt-2">
+          Hai un PUK?{" "}
+          <Link to="/accesso/attiva" className="text-primary underline underline-offset-2">
+            Attiva qui
+          </Link>
+        </p>
       </form>
+
     </main>
   );
 }
@@ -350,13 +358,21 @@ function Dashboard() {
             Benvenuto nel modulo formativo. Segui i passaggi sottostanti: guarda i video
             in ordine, senza saltare, e completa il test finale per ottenere l'attestato.
           </p>
-          <div className="flex justify-center pt-2">
+          <div className="flex flex-col items-center gap-2 pt-2">
             <Button asChild size="lg" style={{ backgroundColor: prussian, color: "#fff" }}>
               <Link to="/corso">
                 {c1 || c2 ? "Continua il corso" : "Inizia il corso"}
               </Link>
             </Button>
+            <Link
+              to="/accesso/attiva"
+              className="text-sm underline underline-offset-2"
+              style={{ color: prussian }}
+            >
+              Hai un altro PUK? Attivalo qui
+            </Link>
           </div>
+
         </header>
 
         <section className="grid gap-4 sm:grid-cols-3">
