@@ -8,24 +8,17 @@ import { Label } from "@/components/ui/label";
 import { Loader2, KeyRound } from "lucide-react";
 
 export const Route = createFileRoute("/accesso/attiva")({
-  head: () => ({ meta: [{ title: "Attiva accesso — Area Corsi" }] }),
-  component: AccessoStep3,
+  head: () => ({ meta: [{ title: "Attiva PUK — Area Corsi" }] }),
+  component: AccessoAttivaPage,
 });
 
-function AccessoStep3() {
+function AccessoAttivaPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    ditta: "",
-    cognome: "",
-    nome: "",
-    license_key: "",
-    puk_code: "",
-  });
+  const [puk, setPuk] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [bypassClicks, setBypassClicks] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -39,20 +32,13 @@ function AccessoStep3() {
     })();
   }, [navigate]);
 
-  function update<K extends keyof typeof form>(k: K, v: string) {
-    setForm((f) => ({ ...f, [k]: v }));
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
-    if (!form.ditta.trim() || !form.cognome.trim() || !form.nome.trim()) {
-      setError("Compila ditta, cognome e nome.");
-      return;
-    }
-    if (!form.license_key.trim() || !form.puk_code.trim()) {
-      setError("Inserisci codice licenza e PUK.");
+    const code = puk.trim();
+    if (!code) {
+      setError("Inserisci il codice PUK.");
       return;
     }
     if (!userId) {
@@ -61,118 +47,103 @@ function AccessoStep3() {
     }
 
     setLoading(true);
-
-    // 1. Controllo licenza
     const nowIso = new Date().toISOString();
-    const { data: lic, error: licErr } = await supabase
-      .from("licenses")
-      .select("id, is_active, expires_at")
-      .eq("license_key", form.license_key.trim())
-      .maybeSingle();
 
-    if (licErr || !lic) {
-      setLoading(false);
-      setError("Codice licenza non trovato.");
-      return;
-    }
-    if (!lic.is_active) {
-      setLoading(false);
-      setError("Licenza non attiva.");
-      return;
-    }
-    if (lic.expires_at && lic.expires_at < nowIso) {
-      setLoading(false);
-      setError("Licenza scaduta.");
-      return;
-    }
-
-    // 2. Controllo PUK
-    const { data: puk, error: pukErr } = await supabase
+    // 1. Verifica PUK
+    const { data: pukRow, error: pukErr } = await supabase
       .from("puk_codes")
-      .select("id, used, expires_at, course_id")
-      .eq("code", form.puk_code.trim())
+      .select("id, used, expires_at")
+      .eq("code", code)
       .maybeSingle();
 
-    if (pukErr || !puk) {
+    if (pukErr || !pukRow || pukRow.used || (pukRow.expires_at && pukRow.expires_at < nowIso)) {
       setLoading(false);
-      setError("Codice PUK non trovato.");
-      return;
-    }
-    if (puk.used) {
-      setLoading(false);
-      setError("Codice PUK già utilizzato.");
-      return;
-    }
-    if (puk.expires_at && puk.expires_at < nowIso) {
-      setLoading(false);
-      setError("Codice PUK scaduto.");
+      setError("Codice non valido, già utilizzato o scaduto.");
       return;
     }
 
-    // 3. Controllo mapping license_puk_map
+    // 2. Recupera license_id dal mapping
     const { data: map, error: mapErr } = await supabase
       .from("license_puk_map")
-      .select("id")
-      .eq("license_id", lic.id)
-      .eq("puk_id", puk.id)
+      .select("license_id")
+      .eq("puk_id", pukRow.id)
       .maybeSingle();
 
-    if (mapErr || !map) {
+    if (mapErr || !map?.license_id) {
       setLoading(false);
-      setError("Licenza e PUK non sono associati.");
+      setError("Nessuna licenza collegata a questo PUK.");
       return;
     }
 
-    // 4. Attivazione: marca PUK come usato + upsert users
-    const { error: pukUpdErr } = await supabase
+    // 3. Verifica licenza
+    const { data: lic, error: licErr } = await supabase
+      .from("licenses")
+      .select("id, is_active, expires_at, user_email, license_key")
+      .eq("id", map.license_id)
+      .maybeSingle();
+
+    if (
+      licErr ||
+      !lic ||
+      lic.is_active !== true ||
+      (lic.expires_at && lic.expires_at < nowIso)
+    ) {
+      setLoading(false);
+      setError("La licenza collegata a questo PUK non è attiva o è scaduta.");
+      return;
+    }
+
+    // 4. Attivazione PUK (anti-race: used=false nel WHERE)
+    const { data: updatedPuk, error: pukUpdErr } = await supabase
       .from("puk_codes")
-      .update({
-        used: true,
-        used_at: nowIso,
-        user_id: userId,
-      })
-      .eq("id", puk.id)
-      .eq("used", false); // doppia sicurezza anti race
+      .update({ used: true, used_at: nowIso, user_id: userId })
+      .eq("id", pukRow.id)
+      .eq("used", false)
+      .select("id");
 
-    if (pukUpdErr) {
+    if (pukUpdErr || !updatedPuk || updatedPuk.length === 0) {
       setLoading(false);
-      setError("Impossibile attivare il PUK. " + pukUpdErr.message);
+      setError("Codice PUK appena utilizzato da un'altra sessione. Riprova con un altro codice.");
       return;
     }
 
-    // Upsert profilo utente (ditta + cognome + nome → name)
-    const fullName = `${form.ditta.trim()} | ${form.cognome.trim()} ${form.nome.trim()}`;
-    await supabase.from("users").upsert(
-      {
-        id: userId,
-        email,
-        name: fullName,
-      },
-      { onConflict: "id" },
-    );
-
-    // Associa email alla licenza se mancante
+    // 5. Assegna email alla licenza se ancora libera
     await supabase
       .from("licenses")
       .update({ user_email: email })
       .eq("id", lic.id)
       .is("user_email", null);
 
-    sessionStorage.setItem("accesso_course_id", puk.course_id ?? "");
+    // 6. Upsert utente
+    await supabase.from("users").upsert(
+      { id: userId, email, name: email },
+      { onConflict: "id" },
+    );
+
+    // 7. Prefill onboarding con la licenza attivata
+    try {
+      localStorage.setItem(
+        "attestato_prefill",
+        JSON.stringify({ licenseKey: lic.license_key ?? "", licenseId: lic.id }),
+      );
+    } catch {
+      // ignore
+    }
+
     setLoading(false);
-    navigate({ to: "/accesso/successo" });
+    navigate({ to: "/" });
   }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
-      <Card className="w-full max-w-lg">
+      <Card className="w-full max-w-md">
         <CardHeader>
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
             <KeyRound className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="text-center">Attiva il tuo accesso</CardTitle>
+          <CardTitle className="text-center">Attiva il tuo PUK</CardTitle>
           <p className="text-center text-sm text-muted-foreground">
-            Completa i dati e inserisci licenza + PUK per accedere al corso.
+            Inserisci il codice PUK ricevuto per sbloccare il corso.
           </p>
         </CardHeader>
         <CardContent>
@@ -182,56 +153,16 @@ function AccessoStep3() {
               <Input value={email} disabled readOnly />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ditta">Ditta</Label>
+              <Label htmlFor="puk">Codice PUK</Label>
               <Input
-                id="ditta"
+                id="puk"
                 required
-                value={form.ditta}
-                onChange={(e) => update("ditta", e.target.value)}
+                autoFocus
+                value={puk}
+                onChange={(e) => setPuk(e.target.value)}
                 disabled={loading}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="cognome">Cognome</Label>
-                <Input
-                  id="cognome"
-                  required
-                  value={form.cognome}
-                  onChange={(e) => update("cognome", e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="nome">Nome</Label>
-                <Input
-                  id="nome"
-                  required
-                  value={form.nome}
-                  onChange={(e) => update("nome", e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="license_key">Codice licenza</Label>
-              <Input
-                id="license_key"
-                required
-                value={form.license_key}
-                onChange={(e) => update("license_key", e.target.value)}
-                disabled={loading}
-                placeholder="es. ABCD-1234-EFGH"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="puk_code">Codice PUK</Label>
-              <Input
-                id="puk_code"
-                required
-                value={form.puk_code}
-                onChange={(e) => update("puk_code", e.target.value)}
-                disabled={loading}
+                placeholder="Inserisci il codice PUK"
+                autoComplete="off"
               />
             </div>
 
@@ -240,26 +171,13 @@ function AccessoStep3() {
                 {error}
               </p>
             )}
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={loading}
-              onClick={(e) => {
-                // DEV BYPASS: 7 click consecutivi saltano validazione licenza/PUK
-                const next = bypassClicks + 1;
-                setBypassClicks(next);
-                if (next >= 7) {
-                  e.preventDefault();
-                  navigate({ to: "/accesso/successo" });
-                }
-              }}
-            >
+            <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifica in corso…
                 </>
               ) : (
-                "Attiva accesso"
+                "Attiva PUK"
               )}
             </Button>
           </form>
