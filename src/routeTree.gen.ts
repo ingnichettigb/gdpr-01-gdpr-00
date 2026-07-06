@@ -10,10 +10,14 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TestRouteImport } from './routes/test'
+import { Route as DatiAttestatoRouteImport } from './routes/dati-attestato'
 import { Route as CorsoRouteImport } from './routes/corso'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AttivazioneRouteImport } from './routes/attivazione'
 import { Route as AttestatoRouteImport } from './routes/attestato'
 import { Route as AccessoRouteImport } from './routes/accesso'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthVerificaRouteImport } from './routes/auth.verifica'
 import { Route as AccessoVerificaRouteImport } from './routes/accesso.verifica'
 import { Route as AccessoSuccessoRouteImport } from './routes/accesso.successo'
 import { Route as AccessoAttivaRouteImport } from './routes/accesso.attiva'
@@ -23,9 +27,24 @@ const TestRoute = TestRouteImport.update({
   path: '/test',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DatiAttestatoRoute = DatiAttestatoRouteImport.update({
+  id: '/dati-attestato',
+  path: '/dati-attestato',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CorsoRoute = CorsoRouteImport.update({
   id: '/corso',
   path: '/corso',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AttivazioneRoute = AttivazioneRouteImport.update({
+  id: '/attivazione',
+  path: '/attivazione',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AttestatoRoute = AttestatoRouteImport.update({
@@ -42,6 +61,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthVerificaRoute = AuthVerificaRouteImport.update({
+  id: '/verifica',
+  path: '/verifica',
+  getParentRoute: () => AuthRoute,
 } as any)
 const AccessoVerificaRoute = AccessoVerificaRouteImport.update({
   id: '/verifica',
@@ -63,32 +87,44 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accesso': typeof AccessoRouteWithChildren
   '/attestato': typeof AttestatoRoute
+  '/attivazione': typeof AttivazioneRoute
+  '/auth': typeof AuthRouteWithChildren
   '/corso': typeof CorsoRoute
+  '/dati-attestato': typeof DatiAttestatoRoute
   '/test': typeof TestRoute
   '/accesso/attiva': typeof AccessoAttivaRoute
   '/accesso/successo': typeof AccessoSuccessoRoute
   '/accesso/verifica': typeof AccessoVerificaRoute
+  '/auth/verifica': typeof AuthVerificaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accesso': typeof AccessoRouteWithChildren
   '/attestato': typeof AttestatoRoute
+  '/attivazione': typeof AttivazioneRoute
+  '/auth': typeof AuthRouteWithChildren
   '/corso': typeof CorsoRoute
+  '/dati-attestato': typeof DatiAttestatoRoute
   '/test': typeof TestRoute
   '/accesso/attiva': typeof AccessoAttivaRoute
   '/accesso/successo': typeof AccessoSuccessoRoute
   '/accesso/verifica': typeof AccessoVerificaRoute
+  '/auth/verifica': typeof AuthVerificaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/accesso': typeof AccessoRouteWithChildren
   '/attestato': typeof AttestatoRoute
+  '/attivazione': typeof AttivazioneRoute
+  '/auth': typeof AuthRouteWithChildren
   '/corso': typeof CorsoRoute
+  '/dati-attestato': typeof DatiAttestatoRoute
   '/test': typeof TestRoute
   '/accesso/attiva': typeof AccessoAttivaRoute
   '/accesso/successo': typeof AccessoSuccessoRoute
   '/accesso/verifica': typeof AccessoVerificaRoute
+  '/auth/verifica': typeof AuthVerificaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -96,38 +132,53 @@ export interface FileRouteTypes {
     | '/'
     | '/accesso'
     | '/attestato'
+    | '/attivazione'
+    | '/auth'
     | '/corso'
+    | '/dati-attestato'
     | '/test'
     | '/accesso/attiva'
     | '/accesso/successo'
     | '/accesso/verifica'
+    | '/auth/verifica'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/accesso'
     | '/attestato'
+    | '/attivazione'
+    | '/auth'
     | '/corso'
+    | '/dati-attestato'
     | '/test'
     | '/accesso/attiva'
     | '/accesso/successo'
     | '/accesso/verifica'
+    | '/auth/verifica'
   id:
     | '__root__'
     | '/'
     | '/accesso'
     | '/attestato'
+    | '/attivazione'
+    | '/auth'
     | '/corso'
+    | '/dati-attestato'
     | '/test'
     | '/accesso/attiva'
     | '/accesso/successo'
     | '/accesso/verifica'
+    | '/auth/verifica'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccessoRoute: typeof AccessoRouteWithChildren
   AttestatoRoute: typeof AttestatoRoute
+  AttivazioneRoute: typeof AttivazioneRoute
+  AuthRoute: typeof AuthRouteWithChildren
   CorsoRoute: typeof CorsoRoute
+  DatiAttestatoRoute: typeof DatiAttestatoRoute
   TestRoute: typeof TestRoute
 }
 
@@ -140,11 +191,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dati-attestato': {
+      id: '/dati-attestato'
+      path: '/dati-attestato'
+      fullPath: '/dati-attestato'
+      preLoaderRoute: typeof DatiAttestatoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/corso': {
       id: '/corso'
       path: '/corso'
       fullPath: '/corso'
       preLoaderRoute: typeof CorsoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/attivazione': {
+      id: '/attivazione'
+      path: '/attivazione'
+      fullPath: '/attivazione'
+      preLoaderRoute: typeof AttivazioneRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/attestato': {
@@ -167,6 +239,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/auth/verifica': {
+      id: '/auth/verifica'
+      path: '/verifica'
+      fullPath: '/auth/verifica'
+      preLoaderRoute: typeof AuthVerificaRouteImport
+      parentRoute: typeof AuthRoute
     }
     '/accesso/verifica': {
       id: '/accesso/verifica'
@@ -207,11 +286,24 @@ const AccessoRouteChildren: AccessoRouteChildren = {
 const AccessoRouteWithChildren =
   AccessoRoute._addFileChildren(AccessoRouteChildren)
 
+interface AuthRouteChildren {
+  AuthVerificaRoute: typeof AuthVerificaRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthVerificaRoute: AuthVerificaRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccessoRoute: AccessoRouteWithChildren,
   AttestatoRoute: AttestatoRoute,
+  AttivazioneRoute: AttivazioneRoute,
+  AuthRoute: AuthRouteWithChildren,
   CorsoRoute: CorsoRoute,
+  DatiAttestatoRoute: DatiAttestatoRoute,
   TestRoute: TestRoute,
 }
 export const routeTree = rootRouteImport
