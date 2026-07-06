@@ -1,60 +1,100 @@
+## Obiettivo
 
-## Stato attuale
+Ristrutturare l'accesso in 3 schermate distinte con codici errore univoci per la diagnostica.
 
-- **Pagina esiste**: `src/routes/accesso.attiva.tsx` (route `/accesso/attiva`), raggiungibile dopo login OTP via `/accesso` → `/accesso/verifica`.
-- **Non è linkata pubblicamente**: nessun bottone su `/` (home) o `/corso`.
-- **Logica attuale diversa da quella richiesta**: chiede all'utente ditta/cognome/nome + `license_key` + `puk_code`, valida entrambi separatamente e poi il mapping. Include un DEV bypass (7 click).
-- **Home `/` ha un flusso parallelo**: `OnboardingForm` in `src/routes/index.tsx` chiede direttamente `licenseKey` senza PUK e salva tutto in `localStorage` — non tocco questa route (fuori scope della richiesta).
+## Flusso a 3 schermate
 
-## Cosa faccio
+```text
+/auth  →  /attivazione  →  /dati-attestato  →  /corso
+(OTP)     (licenza+PUK)    (nome/CF/ditta)
+```
 
-### 1. Riscrivo `src/routes/accesso.attiva.tsx` — form solo PUK
+Ogni step gated: se non hai fatto lo step precedente, redirect indietro.
 
-Nuovo flusso, esattamente come richiesto:
+### Schermata 1 — `/auth` (verifica email)
 
-1. `supabase.auth.getUser()` — se manca sessione → `navigate({ to: "/accesso" })`.
-2. Input singolo **Codice PUK** (trim, case-sensitive, no normalizzazione).
-3. **SELECT `puk_codes`** where `code = <trim>` → verifica esiste, `used = false`, `expires_at IS NULL OR expires_at > now()`. Errore unico: *"Codice non valido, già utilizzato o scaduto."*
-4. **SELECT `license_puk_map`** where `puk_id = puk.id` → ottieni `license_id`. Se manca → *"Nessuna licenza collegata a questo PUK."*
-5. **SELECT `licenses`** where `id = license_id` → verifica `is_active = true` e (`expires_at IS NULL` o futura). Errore: *"La licenza collegata a questo PUK non è attiva o è scaduta."*
-6. Solo se tutto ok, in ordine:
-   - `UPDATE puk_codes SET used=true, used_at=now(), user_id=<uid> WHERE id=<puk.id> AND used=false` (mantengo `used=false` per anti-race). Se `count = 0` righe aggiornate → mostra errore "PUK appena utilizzato" e stop.
-   - `UPDATE licenses SET user_email=<email> WHERE id=<license_id> AND user_email IS NULL`.
-   - `UPSERT users` con `{id: uid, email, name: email}` on conflict `id` (name lo mettiamo = email, dato che il form non chiede più nome — l'utente lo compila poi in `/` onboarding).
-7. `navigate({ to: "/corso" })`.
+Rinomino `/accesso` → `/auth` e `/accesso/verifica` → `/auth/verifica` (mantengo redirect da vecchie route per non rompere link).
 
-Rimuovo: campi ditta/cognome/nome/license_key, DEV bypass, salvataggio `course_id` in sessionStorage (mai riletto).
+Testo intestazione aggiornato: "Verifichiamo che tu sia il proprietario di questa casella di posta. Ti invieremo un codice a 6 cifre via email."
 
-### 2. CTA visibile "Hai già un PUK? Attiva qui"
+**Sistema OTP scelto**: Supabase Auth nativo (`signInWithOtp` / `verifyOtp`). Non introduco `lead_emails`, `verification_code`, Edge Function `send-email`, né limite custom 3/24h — Supabase gestisce già invio, TTL e rate limit nativi. Non serve la tua chiave Resend per questo flusso.
 
-Aggiungo un `<Link to="/accesso/attiva">` come pulsante secondario:
-- **Home `/`** (nel component `Dashboard` header, sotto il bottone "Inizia il corso") — visibile a chi è già dentro.
-- **Onboarding form in `/`** — sotto il form, sopra il footer, così un nuovo utente senza PUK-flow può passare al nuovo flusso.
-- **`/corso`** — piccola nota in alto "Hai un PUK? [Attiva qui]".
+Codici errore mappati sugli errori Supabase:
+- **E-010** — invio fallito (`signInWithOtp` error, email malformata, rete): "Impossibile inviare il codice. Verifica l'indirizzo email. (E-010)"
+- **E-011** — rate limit Supabase raggiunto (error message contiene `rate limit` / `over_email_send_rate_limit`): "Troppi invii ravvicinati. Riprova tra qualche minuto. (E-011)" (Supabase applica ~1/60s; il "3/24h" del brief non è nativo — se lo vuoi davvero applicato, va costruito custom: dimmelo separatamente.)
+- **E-012** — `verifyOtp` fallita (codice errato/scaduto): "Codice non corretto o scaduto. Riprova o richiedi un nuovo invio. (E-012)"
+- **E-013** — verifica riuscita ma sessione non stabilita (edge case, `getUser()` post-verify torna null): "Errore tecnico durante la verifica. Riprova. (E-013)"
 
-Nessuna nav globale esiste oggi, quindi metto CTA inline.
+Nota su `VERIFIED_EMAIL_KEY` in localStorage: con Supabase Auth la fonte di verità è la sessione (`supabase.auth.getUser()`), non un flag localStorage. Rimuovo eventuali flag "verified" locali e uso solo la sessione per gating dello step successivo — così sparisce il rischio "verificato nel browser ma non nel DB" citato nel brief.
 
-### 3. Verifica RLS (read-only, ti mostro poi cosa modificare)
+### Schermata 2 — `/attivazione` (licenza + PUK)
 
-Prima di toccare policy: in build mode leggo con `psql` le policy attuali su `public.puk_codes`, `public.licenses`, `public.license_puk_map`, `public.users` e te le mostro. Confronto con quelle in `docs/migration_accesso_funnel.sql` (che sono le "attese"):
+Rinomino `/accesso/attiva` → `/attivazione`.
 
-- `puk_codes` SELECT/UPDATE `TO authenticated` — accettabile: SELECT è `USING (true)` (necessario per lookup per `code`, che è già segreto); UPDATE ristretta a `used=false → used=true AND user_id=auth.uid()`.
-- `licenses` SELECT `TO authenticated USING (true)` + UPDATE limitata a assegnare `user_email` proprio.
-- `license_puk_map` SELECT `TO authenticated USING (true)`.
-- `users` full CRUD proprio ristretto a `id = auth.uid()`.
+Form: **License Key** + **Codice PUK** (rimuovo email disabled — già garantita da sessione).
 
-**Se le policy in DB combaciano**, non modifico nulla. Se differiscono (es. permessi ad `anon`, o UPDATE non ristretto), ti propongo una migration puntuale prima di applicarla.
+Estraggo la logica in **`src/lib/license.functions.ts`** come `createServerFn` con `.middleware([requireSupabaseAuth])`. Firma:
 
-## Cosa NON tocco
+```ts
+verifyAndActivateLicense({ licenseKey, puk }) →
+  | { ok: true, licenseId, licenseKey }
+  | { ok: false, reason, code }
+```
 
-- Tabella/logica `certificates`.
-- Route `/`, `/corso`, `/test`, `/attestato` — solo aggiungo CTA link.
-- Schema DB.
-- Flusso OTP `/accesso` e `/accesso/verifica`.
+Logica server-side (RLS bypassata via admin client caricato dentro l'handler — necessario perché il match cross-tabella con anti-race è più affidabile server-side, e la funzione autorizza via `requireSupabaseAuth`):
 
-## File modificati
+1. `app_code = "02-GDPR-00"` **hardcoded**.
+2. `context.userId` + email da `context.claims`.
+3. SELECT `licenses` WHERE `license_key = trim(licenseKey)` AND `app_code = "02-GDPR-00"` AND `is_active = true`:
+   - Nessun risultato → **E-101** `license_not_found`
+   - `user_email` valorizzata e ≠ email verificata → **E-102** `email_mismatch`
+   - `expires_at` nel passato → **E-103** `license_expired`
+4. SELECT `puk_codes` JOIN `license_puk_map` WHERE `code = trim(puk)` AND map.license_id = license.id:
+   - Nessun risultato → **E-201** `puk_not_found`
+   - `used = true` AND `licenses.activated_at IS NULL` → **E-202** `puk_already_used`
+   - `used = true` AND `activated_at` valorizzato AND `licenses.user_email = email verificata` → **ok** (riattivazione stesso utente, idempotente)
+5. UPDATE `puk_codes` SET `used=true, used_at=now(), user_id=uid` WHERE id AND `used=false` (anti-race).
+6. UPDATE `licenses` SET `user_email=email, activated_at=now()` WHERE id AND (`user_email IS NULL OR user_email=email`).
+7. UPSERT `users` `{id, email}`.
+8. Qualsiasi eccezione DB / timeout → catch → **E-500** `server_error`.
 
-- `src/routes/accesso.attiva.tsx` — riscritto (form solo PUK).
-- `src/routes/index.tsx` — aggiunto link CTA (2 punti).
-- `src/routes/corso.tsx` — aggiunto link CTA (1 punto).
-- Eventuale nuova migration `docs/migration_puk_activation_rls.sql` **solo se** le policy attuali risultano insicure — te la mostro prima di eseguirla.
+**Client `/attivazione.tsx`**: chiama la server function via `useServerFn`, mappa `reason` → messaggio localizzato con `(codice)` in fondo. E-001 (email non verificata via gate) → redirect `/auth`. Su `ok:true` → `navigate({ to: "/dati-attestato" })` e salva `licenseId`/`licenseKey` in sessionStorage per lo step 3.
+
+### Schermata 3 — `/dati-attestato`
+
+Nuova route. Estraggo `OnboardingForm` da `src/routes/index.tsx` e lo sposto qui (nome, cognome, CF, luogo/data nascita, ditta). Salva in `localStorage["attestato_data"]` come oggi, poi `navigate({ to: "/corso" })`.
+
+Gate: se manca sessione → `/auth`; se manca `licenseId` in sessionStorage → `/attivazione`.
+
+`/` (index) diventa solo landing + CTA "Inizia" → `/auth`. Rimuovo le CTA duplicate "Hai già un PUK".
+
+## Sicurezza / RLS
+
+Con la logica spostata server-side dentro `verifyAndActivateLicense` (admin client autorizzato da `requireSupabaseAuth`), le policy `TO authenticated USING(true)` su `puk_codes`/`licenses`/`license_puk_map` diventano non necessarie per il flusso app. Proposta separata (non applico in questo giro senza tua conferma): restringere quelle SELECT a `TO service_role` per chiudere la superficie con anon key. Te la mostro come SQL a parte prima di eseguirla.
+
+## Tabella file
+
+| File | Azione |
+|---|---|
+| `src/routes/auth.tsx` | nuovo (rinomina da `accesso.tsx`) + testo verifica proprietà + codici E-010/011 |
+| `src/routes/auth.verifica.tsx` | nuovo (rinomina) + codici E-012/013, rimuove `VERIFIED_EMAIL_KEY` |
+| `src/routes/accesso.tsx` / `accesso.verifica.tsx` | redirect helper verso nuove route |
+| `src/routes/attivazione.tsx` | nuovo, form license+PUK, mapping codici E-101…E-500 |
+| `src/routes/accesso.attiva.tsx` | rimosso |
+| `src/lib/license.functions.ts` | nuovo, `verifyAndActivateLicense` server fn con requireSupabaseAuth |
+| `src/routes/dati-attestato.tsx` | nuovo, form dati attestato (estratto da index) |
+| `src/routes/index.tsx` | rimuove OnboardingForm + CTA PUK, resta landing |
+| `src/routes/corso.tsx` | rimuove CTA PUK |
+
+## Cose che NON tocco
+
+- Tabella `certificates` e generazione PDF.
+- Schema DB (nessuna nuova tabella; niente `lead_emails`).
+- Contenuti corso/test.
+- Non chiedo la tua chiave Resend — Supabase Auth invia già l'OTP.
+
+## Punti da confermare prima di procedere
+
+1. Ok Supabase Auth nativo (no Resend, no `lead_emails`, no limite custom 3/24h)?
+2. Ok rimuovere `OnboardingForm` da `/` e spostarlo in `/dati-attestato`?
+3. Ok redirect vecchie route `/accesso*` → nuove `/auth*` / `/attivazione`?
