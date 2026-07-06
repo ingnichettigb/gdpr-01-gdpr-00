@@ -93,23 +93,14 @@ function CorsoPage() {
   return (
     <main className="min-h-screen bg-background py-10 px-4">
       <div className="max-w-3xl mx-auto space-y-8">
-        <header className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight" style={{ color: "#003153" }}>
-              Corso Privacy per Incaricati
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Segui i moduli in sequenza. Usa il carosello in basso per rivedere quelli
-              già completati.
-            </p>
-          </div>
-          <Link
-            to="/accesso/attiva"
-            className="text-sm underline underline-offset-2 shrink-0"
-            style={{ color: "#003153" }}
-          >
-            Hai un PUK? Attiva qui
-          </Link>
+        <header>
+          <h1 className="text-3xl font-bold tracking-tight" style={{ color: "#003153" }}>
+            Corso Privacy per Incaricati
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Segui i moduli in sequenza. Usa il carosello in basso per rivedere quelli
+            già completati.
+          </p>
         </header>
 
 
