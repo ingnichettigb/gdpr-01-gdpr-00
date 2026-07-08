@@ -1,11 +1,13 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { verifyOtp } from "@/lib/otp.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, ShieldCheck } from "lucide-react";
+
 
 export const Route = createFileRoute("/auth/verifica")({
   head: () => ({ meta: [{ title: "Verifica codice — Area Corsi" }] }),
@@ -14,6 +16,7 @@ export const Route = createFileRoute("/auth/verifica")({
 
 function AuthStep2() {
   const navigate = useNavigate();
+  const verifyOtpFn = useServerFn(verifyOtp);
   const [email, setEmail] = useState("");
   const [token, setToken] = useState("");
   const [loading, setLoading] = useState(false);
@@ -36,25 +39,20 @@ function AuthStep2() {
       return;
     }
     setLoading(true);
-    const { error: vErr } = await supabase.auth.verifyOtp({
-      email,
-      token,
-      type: "email",
-    });
-    if (vErr) {
-      setLoading(false);
-      setError("Codice non corretto o scaduto. Riprova o richiedi un nuovo invio. (E-012)");
-      return;
-    }
-    // Conferma sessione dal server (fonte di verità: no localStorage flags)
-    const { data: userRes, error: userErr } = await supabase.auth.getUser();
+    const result = await verifyOtpFn({ data: { email, code: token } });
     setLoading(false);
-    if (userErr || !userRes?.user?.email) {
-      setError("Errore tecnico durante la verifica. Riprova. (E-013)");
+    if (!result.ok) {
+      if (result.reason === "expired") {
+        setError("Codice scaduto. Richiedi un nuovo invio. (E-012)");
+      } else {
+        setError("Codice non corretto. Riprova o richiedi un nuovo invio. (E-012)");
+      }
       return;
     }
+    sessionStorage.setItem("verified_email", email);
     navigate({ to: "/attivazione" });
   }
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">

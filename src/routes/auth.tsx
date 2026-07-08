@@ -1,11 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { requestOtp } from "@/lib/otp.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Mail } from "lucide-react";
+
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -23,6 +25,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthStep1() {
   const navigate = useNavigate();
+  const requestOtpFn = useServerFn(requestOtp);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,18 +39,10 @@ function AuthStep1() {
       return;
     }
     setLoading(true);
-    const { error: sbErr } = await supabase.auth.signInWithOtp({
-      email: cleanEmail,
-      options: { shouldCreateUser: true },
-    });
+    const result = await requestOtpFn({ data: { email: cleanEmail } });
     setLoading(false);
-    if (sbErr) {
-      const msg = (sbErr.message || "").toLowerCase();
-      if (
-        msg.includes("rate limit") ||
-        msg.includes("too many") ||
-        msg.includes("over_email_send_rate_limit")
-      ) {
+    if (!result.sent) {
+      if (result.rateLimited) {
         setError("Troppi invii ravvicinati. Riprova tra qualche minuto. (E-011)");
       } else {
         setError("Impossibile inviare il codice. Verifica l'indirizzo email. (E-010)");
@@ -57,6 +52,7 @@ function AuthStep1() {
     sessionStorage.setItem("accesso_email", cleanEmail);
     navigate({ to: "/auth/verifica" });
   }
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
