@@ -1,100 +1,115 @@
 ## Obiettivo
 
-Ristrutturare l'accesso in 3 schermate distinte con codici errore univoci per la diagnostica.
+Sostituire il Passaggio 1 (verifica email) con un flusso OTP custom su `lead_emails` + Resend, rimuovendo `supabase.auth.signInWithOtp/verifyOtp`. Passaggio 2/3 non vengono toccati in questo step (verranno adattati dopo, dato che oggi dipendono dalla sessione Supabase Auth).
 
-## Flusso a 3 schermate
+## Nota tecnica sul termine "Edge Function"
 
-```text
-/auth  →  /attivazione  →  /dati-attestato  →  /corso
-(OTP)     (licenza+PUK)    (nome/CF/ditta)
-```
+Questo progetto è **TanStack Start** su Cloudflare Workers: non ci sono Supabase Edge Functions (Deno) nel repo. L'equivalente funzionale sono i **server routes** sotto `src/routes/api/public/*` — endpoint HTTP server-side dove giro service role key e Resend key senza esporle al browser. Comportamento identico a una Edge Function per il frontend (POST JSON, risposta JSON).
 
-Ogni step gated: se non hai fatto lo step precedente, redirect indietro.
+Se preferisci Edge Functions Supabase vere (Deno, dashboard Supabase), dimmelo e cambio approccio — richiederebbe però scaffolding `supabase/functions/` che oggi non esiste.
 
-### Schermata 1 — `/auth` (verifica email)
+## Secrets richiesti
 
-Rinomino `/accesso` → `/auth` e `/accesso/verifica` → `/auth/verifica` (mantengo redirect da vecchie route per non rompere link).
+Prima dello sviluppo chiederò via `add_secret`:
+- **`RESEND_API_KEY`** (pattern `re_...`) — necessaria per invio OTP
+- **`SUPABASE_SERVICE_ROLE_KEY`** (pattern `eyJ...`) — necessaria per scrivere in `lead_emails` bypassando RLS
 
-Testo intestazione aggiornato: "Verifichiamo che tu sia il proprietario di questa casella di posta. Ti invieremo un codice a 6 cifre via email."
+`SUPABASE_URL` è già disponibile (hardcoded nel client, la riuso lato server).
 
-**Sistema OTP scelto**: Supabase Auth nativo (`signInWithOtp` / `verifyOtp`). Non introduco `lead_emails`, `verification_code`, Edge Function `send-email`, né limite custom 3/24h — Supabase gestisce già invio, TTL e rate limit nativi. Non serve la tua chiave Resend per questo flusso.
+## Endpoint 1 — `POST /api/public/request-otp`
 
-Codici errore mappati sugli errori Supabase:
-- **E-010** — invio fallito (`signInWithOtp` error, email malformata, rete): "Impossibile inviare il codice. Verifica l'indirizzo email. (E-010)"
-- **E-011** — rate limit Supabase raggiunto (error message contiene `rate limit` / `over_email_send_rate_limit`): "Troppi invii ravvicinati. Riprova tra qualche minuto. (E-011)" (Supabase applica ~1/60s; il "3/24h" del brief non è nativo — se lo vuoi davvero applicato, va costruito custom: dimmelo separatamente.)
-- **E-012** — `verifyOtp` fallita (codice errato/scaduto): "Codice non corretto o scaduto. Riprova o richiedi un nuovo invio. (E-012)"
-- **E-013** — verifica riuscita ma sessione non stabilita (edge case, `getUser()` post-verify torna null): "Errore tecnico durante la verifica. Riprova. (E-013)"
+File nuovo: `src/routes/api/public/request-otp.ts`
 
-Nota su `VERIFIED_EMAIL_KEY` in localStorage: con Supabase Auth la fonte di verità è la sessione (`supabase.auth.getUser()`), non un flag localStorage. Rimuovo eventuali flag "verified" locali e uso solo la sessione per gating dello step successivo — così sparisce il rischio "verificato nel browser ma non nel DB" citato nel brief.
+Flusso handler:
+1. Valida body `{ email: string }` con Zod, normalizza `email.trim().toLowerCase()`, regex email base.
+2. Crea client Supabase con service role key (import dinamico dentro l'handler).
+3. `SELECT * FROM lead_emails WHERE lower(email) = :email ORDER BY created_at DESC LIMIT 1`.
+4. **Rate limit** (max 3/24h):
+   - Se esiste riga con `otp_window_start` valorizzato e `now() - otp_window_start < 24h`:
+     - Se `otp_attempts >= 3` → risposta 200 `{ rateLimited: true }` senza inviare.
+     - Altrimenti incrementa `otp_attempts` nell'UPDATE al passo 6.
+   - Se `otp_window_start` è nullo o più vecchio di 24h → resetta finestra: `otp_attempts = 1`, `otp_window_start = now()`.
+5. Genera `verification_code` = stringa 6 cifre (`crypto.getRandomValues` per numero uniforme in 0–999999, padStart).
+6. Persistenza:
+   - Se **esiste riga non verificata**: UPDATE `verification_code`, `otp_window_start` (se resettato), `otp_attempts`.
+   - Se **esiste solo riga già verificata** (`is_verified = true`): INSERT nuova riga `is_verified=false, source="corporateboostservice", otp_attempts=1, otp_window_start=now()`.
+   - Se **nessuna riga**: INSERT come sopra.
+7. Invio via Resend (`fetch https://api.resend.com/emails`, `Authorization: Bearer ${RESEND_API_KEY}`):
+   - `from`: `Team CorporateBoost <team@corporateboostservice.eu>`
+   - `subject`: `Codice di verifica: {code}`
+   - `html`: markup semplice con codice a 6 cifre in evidenza (font grande, monospace, centrato) + testo "Il codice scade tra 10 minuti."
+   - Se Resend risponde non-2xx → log server-side + risposta 500 `{ error: "send_failed" }`.
+8. Successo → `{ sent: true }`.
 
-### Schermata 2 — `/attivazione` (licenza + PUK)
+Errori:
+- Body invalido → 400 `{ error: "invalid_email" }`.
+- Errore DB → 500 `{ error: "server_error" }`.
 
-Rinomino `/accesso/attiva` → `/attivazione`.
+## Endpoint 2 — `POST /api/public/verify-otp`
 
-Form: **License Key** + **Codice PUK** (rimuovo email disabled — già garantita da sessione).
+File nuovo: `src/routes/api/public/verify-otp.ts`
 
-Estraggo la logica in **`src/lib/license.functions.ts`** come `createServerFn` con `.middleware([requireSupabaseAuth])`. Firma:
+Flusso handler:
+1. Valida body `{ email, code }` con Zod (code = 6 cifre).
+2. Client service role.
+3. `SELECT id, otp_window_start, created_at FROM lead_emails WHERE lower(email) = :email AND verification_code = :code AND is_verified = false ORDER BY created_at DESC LIMIT 1`.
+4. Non trovata → `{ ok: false, reason: "invalid" }`.
+5. Calcola `windowStart = otp_window_start ?? created_at`. Se `now() - windowStart > 10 minuti` → `{ ok: false, reason: "expired" }`.
+6. UPDATE `is_verified = true, verified_at = now()` per quel `id`.
+7. Ritorna `{ ok: true }`.
 
-```ts
-verifyAndActivateLicense({ licenseKey, puk }) →
-  | { ok: true, licenseId, licenseKey }
-  | { ok: false, reason, code }
-```
+Nessuna CORS custom: same-origin.
 
-Logica server-side (RLS bypassata via admin client caricato dentro l'handler — necessario perché il match cross-tabella con anti-race è più affidabile server-side, e la funzione autorizza via `requireSupabaseAuth`):
+## Frontend
 
-1. `app_code = "02-GDPR-00"` **hardcoded**.
-2. `context.userId` + email da `context.claims`.
-3. SELECT `licenses` WHERE `license_key = trim(licenseKey)` AND `app_code = "02-GDPR-00"` AND `is_active = true`:
-   - Nessun risultato → **E-101** `license_not_found`
-   - `user_email` valorizzata e ≠ email verificata → **E-102** `email_mismatch`
-   - `expires_at` nel passato → **E-103** `license_expired`
-4. SELECT `puk_codes` JOIN `license_puk_map` WHERE `code = trim(puk)` AND map.license_id = license.id:
-   - Nessun risultato → **E-201** `puk_not_found`
-   - `used = true` AND `licenses.activated_at IS NULL` → **E-202** `puk_already_used`
-   - `used = true` AND `activated_at` valorizzato AND `licenses.user_email = email verificata` → **ok** (riattivazione stesso utente, idempotente)
-5. UPDATE `puk_codes` SET `used=true, used_at=now(), user_id=uid` WHERE id AND `used=false` (anti-race).
-6. UPDATE `licenses` SET `user_email=email, activated_at=now()` WHERE id AND (`user_email IS NULL OR user_email=email`).
-7. UPSERT `users` `{id, email}`.
-8. Qualsiasi eccezione DB / timeout → catch → **E-500** `server_error`.
+### `src/routes/auth.tsx` (Passaggio 1)
+- Rimuovo `supabase.auth.signInWithOtp`.
+- Sostituisco con `fetch("/api/public/request-otp", { method: "POST", body: JSON.stringify({ email }) })`.
+- Mapping errori:
+  - `rateLimited: true` → **E-011** "Troppi invii ravvicinati. Riprova tra qualche minuto."
+  - `error: "invalid_email"` → **E-010**.
+  - `error: "send_failed"` / 500 / network → **E-010** "Impossibile inviare il codice. Verifica l'indirizzo email."
+- Su `sent: true`: `sessionStorage.setItem("accesso_email", cleanEmail)` (già presente) → `navigate({ to: "/auth/verifica" })`.
 
-**Client `/attivazione.tsx`**: chiama la server function via `useServerFn`, mappa `reason` → messaggio localizzato con `(codice)` in fondo. E-001 (email non verificata via gate) → redirect `/auth`. Su `ok:true` → `navigate({ to: "/dati-attestato" })` e salva `licenseId`/`licenseKey` in sessionStorage per lo step 3.
+### `src/routes/auth.verifica.tsx` (Passaggio 1b)
+- Rimuovo `supabase.auth.verifyOtp` e `supabase.auth.getUser()`.
+- Sostituisco con `fetch("/api/public/verify-otp", { method: "POST", body: JSON.stringify({ email, code: token }) })`.
+- Mapping:
+  - `ok: false, reason: "invalid" | "expired"` → **E-012** "Codice non corretto o scaduto. Riprova o richiedi un nuovo invio."
+  - HTTP non-2xx / network → **E-013** "Errore tecnico durante la verifica. Riprova."
+- Su `ok: true`: `sessionStorage.setItem("verified_email", email)` + naviga a `/attivazione`.
 
-### Schermata 3 — `/dati-attestato`
+### Altri file frontend
+- `src/routes/accesso.verifica.tsx` e `accesso.tsx`: già redirect verso `/auth*`, restano invariati.
+- `src/integrations/supabase/client.ts`: **non lo modifico** (serve ancora per Passaggio 2 finché non lo aggiorni).
 
-Nuova route. Estraggo `OnboardingForm` da `src/routes/index.tsx` e lo sposto qui (nome, cognome, CF, luogo/data nascita, ditta). Salva in `localStorage["attestato_data"]` come oggi, poi `navigate({ to: "/corso" })`.
+## Passaggio 2 — cosa succede ora
 
-Gate: se manca sessione → `/auth`; se manca `licenseId` in sessionStorage → `/attivazione`.
+`attivazione.tsx` chiama `verifyAndActivateLicense`, che dentro fa `supabase.auth.getUser()`. Dopo questa modifica non ci sarà più sessione → tutte le attivazioni falliranno con **E-001 `email_not_verified`** e redirect a `/auth`.
 
-`/` (index) diventa solo landing + CTA "Inizia" → `/auth`. Rimuovo le CTA duplicate "Hai già un PUK".
-
-## Sicurezza / RLS
-
-Con la logica spostata server-side dentro `verifyAndActivateLicense` (admin client autorizzato da `requireSupabaseAuth`), le policy `TO authenticated USING(true)` su `puk_codes`/`licenses`/`license_puk_map` diventano non necessarie per il flusso app. Proposta separata (non applico in questo giro senza tua conferma): restringere quelle SELECT a `TO service_role` per chiudere la superficie con anon key. Te la mostro come SQL a parte prima di eseguirla.
+Come da tuo brief non lo tocco in questo step, ma lo segnalo: il Passaggio 2 sarà **rotto** finché non lo aggiorniamo per leggere `sessionStorage.verified_email` invece della sessione Supabase (e la logica server per validare la licenza dovrà essere ripensata, non potendo più fidarsi di `auth.uid()`).
 
 ## Tabella file
 
 | File | Azione |
 |---|---|
-| `src/routes/auth.tsx` | nuovo (rinomina da `accesso.tsx`) + testo verifica proprietà + codici E-010/011 |
-| `src/routes/auth.verifica.tsx` | nuovo (rinomina) + codici E-012/013, rimuove `VERIFIED_EMAIL_KEY` |
-| `src/routes/accesso.tsx` / `accesso.verifica.tsx` | redirect helper verso nuove route |
-| `src/routes/attivazione.tsx` | nuovo, form license+PUK, mapping codici E-101…E-500 |
-| `src/routes/accesso.attiva.tsx` | rimosso |
-| `src/lib/license.functions.ts` | nuovo, `verifyAndActivateLicense` server fn con requireSupabaseAuth |
-| `src/routes/dati-attestato.tsx` | nuovo, form dati attestato (estratto da index) |
-| `src/routes/index.tsx` | rimuove OnboardingForm + CTA PUK, resta landing |
-| `src/routes/corso.tsx` | rimuove CTA PUK |
+| `src/routes/api/public/request-otp.ts` | nuovo — server route POST |
+| `src/routes/api/public/verify-otp.ts` | nuovo — server route POST |
+| `src/routes/auth.tsx` | chiama request-otp, non signInWithOtp |
+| `src/routes/auth.verifica.tsx` | chiama verify-otp, salva verified_email in sessionStorage |
+| `src/integrations/supabase/client.ts` | invariato |
+| `src/lib/license.functions.ts` | invariato |
+| `src/routes/attivazione.tsx` | invariato |
 
-## Cose che NON tocco
+## Cose che NON tocco (conferma tua)
 
-- Tabella `certificates` e generazione PDF.
-- Schema DB (nessuna nuova tabella; niente `lead_emails`).
-- Contenuti corso/test.
-- Non chiedo la tua chiave Resend — Supabase Auth invia già l'OTP.
+- `auth.users` / Supabase Auth (resta configurato ma inutilizzato dal Passaggio 1).
+- Schema `lead_emails`.
+- `license.functions.ts`, Passaggio 2, Passaggio 3.
+- RLS su schema `public`.
 
-## Punti da confermare prima di procedere
+## Da confermare prima di procedere
 
-1. Ok Supabase Auth nativo (no Resend, no `lead_emails`, no limite custom 3/24h)?
-2. Ok rimuovere `OnboardingForm` da `/` e spostarlo in `/dati-attestato`?
-3. Ok redirect vecchie route `/accesso*` → nuove `/auth*` / `/attivazione`?
+1. Ok "Edge Function" = server route TanStack sotto `/api/public/*` (unica opzione praticabile in questo repo), o vuoi che scaffoldi `supabase/functions/` per Deno reali?
+2. Ok procedere sapendo che il Passaggio 2 sarà temporaneamente rotto finché non lo aggiorniamo nello step successivo?
+3. Il dominio `corporateboostservice.eu` è verificato nel tuo account Resend? (altrimenti Resend rifiuterà l'invio da quel `from`).
