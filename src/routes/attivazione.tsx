@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,7 @@ const MESSAGES: Record<ActivationReason, string> = {
 
 function AttivazionePage() {
   const navigate = useNavigate();
+  const activateFn = useServerFn(verifyAndActivateLicense);
   const [email, setEmail] = useState("");
   const [licenseKey, setLicenseKey] = useState("");
   const [puk, setPuk] = useState("");
@@ -38,25 +39,23 @@ function AttivazionePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    (async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!data.user?.email) {
-        navigate({ to: "/auth" });
-        return;
-      }
-      setEmail(data.user.email);
-    })();
+    const verified = sessionStorage.getItem("verified_email");
+    if (!verified) {
+      navigate({ to: "/auth" });
+      return;
+    }
+    setEmail(verified);
   }, [navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!licenseKey.trim() || !puk.trim()) {
+    if (!email || !licenseKey.trim() || !puk.trim()) {
       setError("Inserisci sia il codice licenza sia il codice PUK.");
       return;
     }
     setLoading(true);
-    const result = await verifyAndActivateLicense({ licenseKey, puk });
+    const result = await activateFn({ data: { email, licenseKey, puk } });
     setLoading(false);
 
     if (!result.ok) {

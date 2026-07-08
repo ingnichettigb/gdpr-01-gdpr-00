@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,8 +43,8 @@ function DatiAttestatoPage() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!data.user?.email) {
+      const verifiedEmail = sessionStorage.getItem("verified_email");
+      if (!verifiedEmail) {
         navigate({ to: "/auth" });
         return;
       }
