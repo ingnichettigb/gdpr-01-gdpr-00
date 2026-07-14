@@ -1,26 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
-const SUPABASE_URL = "https://ruopxyprezzxoirfrjrm.supabase.co";
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TEN_MIN_MS = 10 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-function createAdminClient() {
-  const url = process.env.SUPABASE_URL ?? SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!key) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
-  }
-  return createClient(url, key, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  });
-}
 
 function generateCode() {
   const arr = new Uint32Array(1);
@@ -32,18 +15,27 @@ const requestSchema = z.object({
   email: z.string().min(1).max(255),
 });
 
+/**
+ * Codici errore OTP:
+ *  - E-010: invio email fallito (Resend down / chiave mancante)
+ *  - E-011: rate limit superato (>3 invii in 24h a email NON verificata)
+ *  - E-012: codice errato o scaduto (verifica)
+ *  - E-013: errore salvataggio / conferma post-update
+ */
 export const requestOtp = createServerFn({ method: "POST" })
   .validator(requestSchema)
   .handler(async ({ data }) => {
-
     const email = data.email.trim().toLowerCase();
     if (!EMAIL_REGEX.test(email)) {
-      return { sent: false, error: "invalid_email" as const };
+      return { sent: false, error: "invalid_email" as const, code: "E-013" };
     }
 
-    const supabaseAdmin = createAdminClient();
+    // Import server-only nel body dell'handler per non farlo entrare nel bundle client.
+    const { supabaseExternal } = await import(
+      "@/integrations/supabase/client.external"
+    );
 
-    const { data: rows, error: qErr } = await supabaseAdmin
+    const { data: rows, error: qErr } = await supabaseExternal
       .from("lead_emails")
       .select("id, is_verified, otp_attempts, otp_window_start")
       .ilike("email", email)
@@ -52,7 +44,7 @@ export const requestOtp = createServerFn({ method: "POST" })
 
     if (qErr) {
       console.error("request-otp query error", qErr);
-      return { sent: false, error: "server_error" as const };
+      return { sent: false, error: "server_error" as const, code: "E-013" };
     }
 
     const row = rows?.[0];
@@ -62,23 +54,45 @@ export const requestOtp = createServerFn({ method: "POST" })
     let windowStart = now.toISOString();
 
     if (row) {
-      const rowWindowStart = row.otp_window_start
-        ? new Date(row.otp_window_start)
-        : null;
-      const withinWindow =
-        rowWindowStart &&
-        now.getTime() - rowWindowStart.getTime() < DAY_MS;
+      if (row.is_verified === true) {
+        // Email GIÀ verificata → reset attempts a 0 prima di procedere
+        // (non penalizzare un utente già verificato con il rate-limit
+        // pensato per bloccare tentativi di verificare email altrui).
+        attempts = 1;
+        windowStart = now.toISOString();
 
-      if (withinWindow) {
-        if ((row.otp_attempts ?? 0) >= 3) {
-          return { sent: false, rateLimited: true };
+        const { error: updErr } = await supabaseExternal
+          .from("lead_emails")
+          .update({
+            verification_code: code,
+            is_verified: false,
+            verified_at: null,
+            otp_attempts: attempts,
+            otp_window_start: windowStart,
+          })
+          .eq("id", row.id);
+        if (updErr) {
+          console.error("request-otp update(verified) error", updErr);
+          return { sent: false, error: "server_error" as const, code: "E-013" };
         }
-        attempts = (row.otp_attempts ?? 0) + 1;
-        windowStart = rowWindowStart.toISOString();
-      }
+      } else {
+        // Email NON verificata → rate limit 3/24h
+        const rowWindowStart = row.otp_window_start
+          ? new Date(row.otp_window_start)
+          : null;
+        const withinWindow =
+          rowWindowStart &&
+          now.getTime() - rowWindowStart.getTime() < DAY_MS;
 
-      if (row.is_verified === false) {
-        const { error: updErr } = await supabaseAdmin
+        if (withinWindow) {
+          if ((row.otp_attempts ?? 0) >= 3) {
+            return { sent: false, rateLimited: true, code: "E-011" };
+          }
+          attempts = (row.otp_attempts ?? 0) + 1;
+          windowStart = rowWindowStart.toISOString();
+        }
+
+        const { error: updErr } = await supabaseExternal
           .from("lead_emails")
           .update({
             verification_code: code,
@@ -88,26 +102,11 @@ export const requestOtp = createServerFn({ method: "POST" })
           .eq("id", row.id);
         if (updErr) {
           console.error("request-otp update error", updErr);
-          return { sent: false, error: "server_error" as const };
-        }
-      } else {
-        const { error: insErr } = await supabaseAdmin
-          .from("lead_emails")
-          .insert({
-            email,
-            verification_code: code,
-            is_verified: false,
-            source: "corporateboostservice",
-            otp_attempts: attempts,
-            otp_window_start: windowStart,
-          });
-        if (insErr) {
-          console.error("request-otp insert error", insErr);
-          return { sent: false, error: "server_error" as const };
+          return { sent: false, error: "server_error" as const, code: "E-013" };
         }
       }
     } else {
-      const { error: insErr } = await supabaseAdmin
+      const { error: insErr } = await supabaseExternal
         .from("lead_emails")
         .insert({
           email,
@@ -119,13 +118,13 @@ export const requestOtp = createServerFn({ method: "POST" })
         });
       if (insErr) {
         console.error("request-otp insert error", insErr);
-        return { sent: false, error: "server_error" as const };
+        return { sent: false, error: "server_error" as const, code: "E-013" };
       }
     }
 
     const resendKey = process.env.RESEND_API_KEY;
     if (!resendKey) {
-      return { sent: false, error: "send_failed" as const };
+      return { sent: false, error: "send_failed" as const, code: "E-010" };
     }
 
     const resendResp = await fetch("https://api.resend.com/emails", {
@@ -149,7 +148,7 @@ export const requestOtp = createServerFn({ method: "POST" })
     if (!resendResp.ok) {
       const text = await resendResp.text();
       console.error("Resend error", resendResp.status, text);
-      return { sent: false, error: "send_failed" as const };
+      return { sent: false, error: "send_failed" as const, code: "E-010" };
     }
 
     return { sent: true };
@@ -163,13 +162,14 @@ const verifySchema = z.object({
 export const verifyOtp = createServerFn({ method: "POST" })
   .validator(verifySchema)
   .handler(async ({ data }) => {
-
     const email = data.email.trim().toLowerCase();
     const code = data.code.trim();
 
-    const supabaseAdmin = createAdminClient();
+    const { supabaseExternal } = await import(
+      "@/integrations/supabase/client.external"
+    );
 
-    const { data: rows, error: qErr } = await supabaseAdmin
+    const { data: rows, error: qErr } = await supabaseExternal
       .from("lead_emails")
       .select("id, otp_window_start, created_at")
       .ilike("email", email)
@@ -180,12 +180,12 @@ export const verifyOtp = createServerFn({ method: "POST" })
 
     if (qErr) {
       console.error("verify-otp query error", qErr);
-      return { ok: false, reason: "invalid" as const };
+      return { ok: false, reason: "invalid" as const, code: "E-012" };
     }
 
     const row = rows?.[0];
     if (!row) {
-      return { ok: false, reason: "invalid" as const };
+      return { ok: false, reason: "invalid" as const, code: "E-012" };
     }
 
     const windowStart = row.otp_window_start
@@ -196,10 +196,10 @@ export const verifyOtp = createServerFn({ method: "POST" })
 
     const now = new Date();
     if (!windowStart || now.getTime() - windowStart.getTime() > TEN_MIN_MS) {
-      return { ok: false, reason: "expired" as const };
+      return { ok: false, reason: "expired" as const, code: "E-012" };
     }
 
-    const { error: updErr } = await supabaseAdmin
+    const { error: updErr } = await supabaseExternal
       .from("lead_emails")
       .update({
         is_verified: true,
@@ -209,7 +209,21 @@ export const verifyOtp = createServerFn({ method: "POST" })
 
     if (updErr) {
       console.error("verify-otp update error", updErr);
-      return { ok: false, reason: "invalid" as const };
+      return { ok: false, reason: "invalid" as const, code: "E-013" };
+    }
+
+    // Ri-lettura di conferma: non fidarsi solo dell'assenza di errore
+    // sull'update. Confermiamo esplicitamente che is_verified sia true
+    // prima di dare esito positivo al frontend.
+    const { data: confirmRow, error: confirmErr } = await supabaseExternal
+      .from("lead_emails")
+      .select("is_verified")
+      .eq("id", row.id)
+      .maybeSingle();
+
+    if (confirmErr || !confirmRow || confirmRow.is_verified !== true) {
+      console.error("verify-otp confirm re-read failed", confirmErr, confirmRow);
+      return { ok: false, reason: "invalid" as const, code: "E-013" };
     }
 
     return { ok: true };

@@ -1,24 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-
-const APP_CODE = "02-GDPR-00";
-const SUPABASE_URL = "https://ruopxyprezzxoirfrjrm.supabase.co";
-
-function createAdminClient() {
-  const url = process.env.SUPABASE_URL ?? SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!key) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
-  }
-  return createClient(url, key, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  });
-}
+import { APP_CODE } from "@/lib/app-config";
 
 export type ActivationReason =
   | "email_not_verified"
@@ -54,13 +36,13 @@ const activationSchema = z.object({
 });
 
 /**
- * Verifica licenza + PUK e attiva. Ritorna sempre un ActivationResult tipizzato
- * con un codice numerico univoco per ciascun motivo di fallimento (E-001…E-500).
+ * Verifica licenza + PUK e attiva. Ritorna sempre un ActivationResult
+ * tipizzato con un codice univoco per ciascun motivo di fallimento
+ * (E-001, E-101..E-103, E-201..E-202, E-500).
  *
- * Il flusso usa l'email verificata via OTP custom (non Supabase Auth), quindi
- * l'attivazione avviene in modalità service-role. Non viene creata alcuna riga
- * in auth.users / public.users: l'identità è rappresentata dall'email
- * verificata che viene scritta in licenses.user_email.
+ * Usa SEMPRE `supabaseExternal` (database condiviso project ref
+ * ruopxyprezzxoirfrjrm) — MAI il client Lovable Cloud, che punterebbe a
+ * un database interno diverso privo di questi dati.
  */
 export const verifyAndActivateLicense = createServerFn({ method: "POST" })
   .validator(activationSchema)
@@ -71,14 +53,29 @@ export const verifyAndActivateLicense = createServerFn({ method: "POST" })
       const puk = data.puk.trim();
       const nowIso = new Date().toISOString();
 
-      if (!email) {
+      if (!email) return fail("email_not_verified");
+
+      const { supabaseExternal } = await import(
+        "@/integrations/supabase/client.external"
+      );
+
+      // 0. L'email deve risultare verificata in lead_emails
+      const { data: leadRows, error: leadErr } = await supabaseExternal
+        .from("lead_emails")
+        .select("id, is_verified")
+        .ilike("email", email)
+        .eq("is_verified", true)
+        .limit(1);
+      if (leadErr) {
+        console.error("lead lookup error", leadErr);
+        return fail("server_error");
+      }
+      if (!leadRows || leadRows.length === 0) {
         return fail("email_not_verified");
       }
 
-      const supabaseAdmin = createAdminClient();
-
-      // 1. Licenza per (license_key, app_code, is_active=true)
-      const { data: lic, error: licErr } = await supabaseAdmin
+      // 1. Licenza: license_key + APP_CODE + is_active
+      const { data: lic, error: licErr } = await supabaseExternal
         .from("licenses")
         .select("id, is_active, expires_at, user_email, activated_at, license_key")
         .eq("license_key", licenseKey)
@@ -92,17 +89,21 @@ export const verifyAndActivateLicense = createServerFn({ method: "POST" })
       }
       if (!lic) return fail("license_not_found");
 
+      // 2. Email della licenza deve corrispondere (case-insensitive)
       if (lic.user_email && lic.user_email.toLowerCase() !== email) {
         return fail("email_mismatch");
       }
+
+      // 3. Scadenza licenza
       if (lic.expires_at && lic.expires_at < nowIso) {
         return fail("license_expired");
       }
 
-      // 2. PUK per (code) → verifica mapping con la licenza
-      const { data: pukRow, error: pukErr } = await supabaseAdmin
+      // 4. PUK: cerca in puk_codes per license_id + code
+      const { data: pukRow, error: pukErr } = await supabaseExternal
         .from("puk_codes")
-        .select("id, used, expires_at")
+        .select("id, used, used_at")
+        .eq("license_id", lic.id)
         .eq("code", puk)
         .maybeSingle();
       if (pukErr) {
@@ -111,39 +112,22 @@ export const verifyAndActivateLicense = createServerFn({ method: "POST" })
       }
       if (!pukRow) return fail("puk_not_found");
 
-      const { data: map, error: mapErr } = await supabaseAdmin
-        .from("license_puk_map")
-        .select("license_id")
-        .eq("puk_id", pukRow.id)
-        .eq("license_id", lic.id)
-        .maybeSingle();
-      if (mapErr) {
-        console.error("license-puk map lookup error", mapErr);
-        return fail("server_error");
-      }
-      if (!map) return fail("puk_not_found");
-
-      if (pukRow.expires_at && pukRow.expires_at < nowIso) {
-        return fail("puk_not_found");
-      }
-
-      // 3. PUK già usato — distinzione idempotenza vs abuso
+      // 5. PUK già usato: consenti solo se licenza già attivata (re-ingresso)
       if (pukRow.used === true) {
-        if (
-          lic.activated_at &&
-          lic.user_email &&
-          lic.user_email.toLowerCase() === email
-        ) {
-          // Riattivazione stesso utente → idempotente
-          return { ok: true, licenseId: lic.id, licenseKey: lic.license_key ?? licenseKey };
+        if (lic.activated_at) {
+          return {
+            ok: true,
+            licenseId: lic.id,
+            licenseKey: lic.license_key ?? licenseKey,
+          };
         }
         return fail("puk_already_used");
       }
 
-      // 4. Attivazione PUK (anti-race con eq(used,false))
-      const { data: pukUpd, error: pukUpdErr } = await supabaseAdmin
+      // 6. Attivazione PUK (anti-race con eq(used,false))
+      const { data: pukUpd, error: pukUpdErr } = await supabaseExternal
         .from("puk_codes")
-        .update({ used: true, used_at: nowIso, user_id: null })
+        .update({ used: true, used_at: nowIso })
         .eq("id", pukRow.id)
         .eq("used", false)
         .select("id");
@@ -154,17 +138,24 @@ export const verifyAndActivateLicense = createServerFn({ method: "POST" })
       }
       if (!pukUpd || pukUpd.length === 0) return fail("puk_already_used");
 
-      // 5. Assegna email e activated_at alla licenza (solo se libera o già mia)
-      const { error: licUpdErr } = await supabaseAdmin
+      // 7. Licenza: valorizza email e activated_at (solo se ancora null)
+      const licUpdatePayload: Record<string, unknown> = { user_email: email };
+      if (!lic.activated_at) licUpdatePayload.activated_at = nowIso;
+
+      const { error: licUpdErr } = await supabaseExternal
         .from("licenses")
-        .update({ user_email: email, activated_at: nowIso })
+        .update(licUpdatePayload)
         .eq("id", lic.id);
       if (licUpdErr) {
         console.error("license update error", licUpdErr);
         return fail("server_error");
       }
 
-      return { ok: true, licenseId: lic.id, licenseKey: lic.license_key ?? licenseKey };
+      return {
+        ok: true,
+        licenseId: lic.id,
+        licenseKey: lic.license_key ?? licenseKey,
+      };
     } catch (err) {
       console.error("verifyAndActivateLicense exception", err);
       return fail("server_error");
