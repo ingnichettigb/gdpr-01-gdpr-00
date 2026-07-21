@@ -17,6 +17,7 @@ import { Route as AttivazioneRouteImport } from './routes/attivazione'
 import { Route as AttestatoRouteImport } from './routes/attestato'
 import { Route as AccessoRouteImport } from './routes/accesso'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthIndexRouteImport } from './routes/auth.index'
 import { Route as AuthVerificaRouteImport } from './routes/auth.verifica'
 import { Route as AccessoVerificaRouteImport } from './routes/accesso.verifica'
 import { Route as AccessoSuccessoRouteImport } from './routes/accesso.successo'
@@ -62,6 +63,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthIndexRoute = AuthIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthVerificaRoute = AuthVerificaRouteImport.update({
   id: '/verifica',
   path: '/verifica',
@@ -96,13 +102,13 @@ export interface FileRoutesByFullPath {
   '/accesso/successo': typeof AccessoSuccessoRoute
   '/accesso/verifica': typeof AccessoVerificaRoute
   '/auth/verifica': typeof AuthVerificaRoute
+  '/auth/': typeof AuthIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accesso': typeof AccessoRouteWithChildren
   '/attestato': typeof AttestatoRoute
   '/attivazione': typeof AttivazioneRoute
-  '/auth': typeof AuthRouteWithChildren
   '/corso': typeof CorsoRoute
   '/dati-attestato': typeof DatiAttestatoRoute
   '/test': typeof TestRoute
@@ -110,6 +116,7 @@ export interface FileRoutesByTo {
   '/accesso/successo': typeof AccessoSuccessoRoute
   '/accesso/verifica': typeof AccessoVerificaRoute
   '/auth/verifica': typeof AuthVerificaRoute
+  '/auth': typeof AuthIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -125,6 +132,7 @@ export interface FileRoutesById {
   '/accesso/successo': typeof AccessoSuccessoRoute
   '/accesso/verifica': typeof AccessoVerificaRoute
   '/auth/verifica': typeof AuthVerificaRoute
+  '/auth/': typeof AuthIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -141,13 +149,13 @@ export interface FileRouteTypes {
     | '/accesso/successo'
     | '/accesso/verifica'
     | '/auth/verifica'
+    | '/auth/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/accesso'
     | '/attestato'
     | '/attivazione'
-    | '/auth'
     | '/corso'
     | '/dati-attestato'
     | '/test'
@@ -155,6 +163,7 @@ export interface FileRouteTypes {
     | '/accesso/successo'
     | '/accesso/verifica'
     | '/auth/verifica'
+    | '/auth'
   id:
     | '__root__'
     | '/'
@@ -169,6 +178,7 @@ export interface FileRouteTypes {
     | '/accesso/successo'
     | '/accesso/verifica'
     | '/auth/verifica'
+    | '/auth/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -240,6 +250,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/': {
+      id: '/auth/'
+      path: '/'
+      fullPath: '/auth/'
+      preLoaderRoute: typeof AuthIndexRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/auth/verifica': {
       id: '/auth/verifica'
       path: '/verifica'
@@ -288,10 +305,12 @@ const AccessoRouteWithChildren =
 
 interface AuthRouteChildren {
   AuthVerificaRoute: typeof AuthVerificaRoute
+  AuthIndexRoute: typeof AuthIndexRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthVerificaRoute: AuthVerificaRoute,
+  AuthIndexRoute: AuthIndexRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
