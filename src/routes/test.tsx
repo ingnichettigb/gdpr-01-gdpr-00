@@ -157,11 +157,14 @@ function TestPage() {
                         certificate_number: cert,
                         license_id: a.licenseId,
                         license_key: a.licenseKey ?? null,
+                        puk_code: a.puk ?? null,
                         nome_snapshot: a.nome ?? null,
                         cf_snapshot: (a.cf ?? "").toUpperCase() || null,
                         ditta_snapshot: a.ditta ?? null,
                         luogo_nascita_snapshot: a.luogo || null,
                         data_nascita_snapshot: a.dataNascita || null,
+                        test_score: finalScore,
+                        test_result: "passed",
                       })
                       .select("id, issued_at")
                       .single();
