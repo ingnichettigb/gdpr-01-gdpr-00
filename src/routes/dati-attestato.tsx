@@ -23,6 +23,7 @@ type Data = {
   ditta: string;
   licenseKey: string;
   licenseId: string;
+  puk: string;
 };
 
 function DatiAttestatoPage() {
