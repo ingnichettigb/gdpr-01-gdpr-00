@@ -12,7 +12,7 @@ export type ActivationReason =
   | "server_error";
 
 export type ActivationResult =
-  | { ok: true; licenseId: string; licenseKey: string }
+  | { ok: true; licenseId: string; licenseKey: string; puk: string }
   | { ok: false; reason: ActivationReason; code: string };
 
 const CODE_MAP: Record<ActivationReason, string> = {
