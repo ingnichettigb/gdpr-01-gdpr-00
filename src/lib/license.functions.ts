@@ -119,6 +119,7 @@ export const verifyAndActivateLicense = createServerFn({ method: "POST" })
             ok: true,
             licenseId: lic.id,
             licenseKey: lic.license_key ?? licenseKey,
+            puk,
           };
         }
         return fail("puk_already_used");
