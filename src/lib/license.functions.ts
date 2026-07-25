@@ -156,6 +156,7 @@ export const verifyAndActivateLicense = createServerFn({ method: "POST" })
         ok: true,
         licenseId: lic.id,
         licenseKey: lic.license_key ?? licenseKey,
+        puk,
       };
     } catch (err) {
       console.error("verifyAndActivateLicense exception", err);
