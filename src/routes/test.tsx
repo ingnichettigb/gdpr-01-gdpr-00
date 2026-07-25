@@ -72,9 +72,29 @@ function TestPage() {
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
-    const ok = isLessonCompleted("lezione1") && isLessonCompleted("lezione2");
-    setAllowed(ok);
-  }, []);
+    (async () => {
+      const ok = isLessonCompleted("lezione1") && isLessonCompleted("lezione2");
+      // Blocca se questo PUK ha già generato un certificato
+      try {
+        const raw = sessionStorage.getItem("activation");
+        const act = raw ? JSON.parse(raw) : null;
+        if (act?.puk) {
+          const { data: cert } = await supabase
+            .from("certificates")
+            .select("id")
+            .eq("puk_code", act.puk)
+            .maybeSingle();
+          if (cert) {
+            navigate({ to: "/corso-gia-completato" });
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("cert check error", err);
+      }
+      setAllowed(ok);
+    })();
+  }, [navigate]);
 
   const score = useMemo(
     () => QUESTIONS.reduce((s, q) => (answers[q.id] === q.correct ? s + 1 : s), 0),
