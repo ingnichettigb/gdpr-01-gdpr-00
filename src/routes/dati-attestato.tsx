@@ -29,7 +29,7 @@ type Data = {
 function DatiAttestatoPage() {
   const navigate = useNavigate();
   const [ready, setReady] = useState(false);
-  const [activation, setActivation] = useState<{ licenseId: string; licenseKey: string } | null>(null);
+  const [activation, setActivation] = useState<{ licenseId: string; licenseKey: string; puk: string } | null>(null);
   const [form, setForm] = useState<Data>({
     nome: "",
     luogo: "",
@@ -38,6 +38,7 @@ function DatiAttestatoPage() {
     ditta: "",
     licenseKey: "",
     licenseId: "",
+    puk: "",
   });
   const [accepted, setAccepted] = useState(false);
   const [saving, setSaving] = useState(false);
