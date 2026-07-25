@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, KeyRound } from "lucide-react";
 import { verifyAndActivateLicense, type ActivationReason } from "@/lib/license.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/attivazione")({
   head: () => ({ meta: [{ title: "Attivazione licenza — Area Corsi" }] }),
