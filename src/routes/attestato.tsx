@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle, Download, RotateCw } from "lucide-react";
 import { generateAttestatoPdf } from "@/lib/generateAttestatoPdf";
 import timbroAsset from "@/assets/timbro_corporate.png.asset.json";
+import { supabase } from "@/integrations/supabase/client";
+
 
 
 export const Route = createFileRoute("/attestato")({
@@ -40,29 +42,63 @@ function AttestatoPage() {
   const [issuedAt, setIssuedAt] = useState<string>("");
 
   useEffect(() => {
-    const passed = localStorage.getItem(PASSED_KEY) === "true";
-    setAllowed(passed);
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
+    (async () => {
+      // 1) Prova a leggere il certificato da Supabase usando il PUK corrente
+      let pukCorrente: string | null = null;
       try {
-        const parsed = JSON.parse(saved);
-        if (parsed && parsed.nome && parsed.cf && parsed.ditta) {
-          setData({ ...parsed, cf: String(parsed.cf).toUpperCase() });
-        }
+        const raw = sessionStorage.getItem("activation");
+        const act = raw ? JSON.parse(raw) : null;
+        pukCorrente = act?.puk ?? null;
       } catch {
         // ignore
       }
-    }
-    let cert = localStorage.getItem("attestato_cert_number");
-    if (!cert && passed) {
-      const d = new Date();
-      const pad = (n: number) => String(n).padStart(2, "0");
-      cert = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-      localStorage.setItem("attestato_cert_number", cert);
-    }
-    if (cert) setCertNumber(cert);
-    const iss = localStorage.getItem("attestato_issued_at");
-    if (iss) setIssuedAt(iss);
+
+      if (pukCorrente) {
+        const { data: cert } = await supabase
+          .from("certificates")
+          .select("*")
+          .eq("puk_code", pukCorrente)
+          .maybeSingle();
+        if (cert) {
+          setAllowed(true);
+          setData({
+            nome: cert.nome_snapshot ?? "",
+            luogo: cert.luogo_nascita_snapshot ?? "",
+            dataNascita: cert.data_nascita_snapshot ?? "",
+            cf: (cert.cf_snapshot ?? "").toUpperCase(),
+            ditta: cert.ditta_snapshot ?? "",
+          });
+          setCertNumber(cert.certificate_number ?? "");
+          setIssuedAt(cert.issued_at ?? "");
+          return;
+        }
+      }
+
+      // 2) Fallback al flusso legacy (localStorage) — nessun certificato ancora salvato
+      const passed = localStorage.getItem(PASSED_KEY) === "true";
+      setAllowed(passed);
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.nome && parsed.cf && parsed.ditta) {
+            setData({ ...parsed, cf: String(parsed.cf).toUpperCase() });
+          }
+        } catch {
+          // ignore
+        }
+      }
+      let cert = localStorage.getItem("attestato_cert_number");
+      if (!cert && passed) {
+        const d = new Date();
+        const pad = (n: number) => String(n).padStart(2, "0");
+        cert = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+        localStorage.setItem("attestato_cert_number", cert);
+      }
+      if (cert) setCertNumber(cert);
+      const iss = localStorage.getItem("attestato_issued_at");
+      if (iss) setIssuedAt(iss);
+    })();
   }, []);
 
   if (allowed === null) return null;

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TestRouteImport } from './routes/test'
 import { Route as DatiAttestatoRouteImport } from './routes/dati-attestato'
+import { Route as CorsoGiaCompletatoRouteImport } from './routes/corso-gia-completato'
 import { Route as CorsoRouteImport } from './routes/corso'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AttivazioneRouteImport } from './routes/attivazione'
@@ -31,6 +32,11 @@ const TestRoute = TestRouteImport.update({
 const DatiAttestatoRoute = DatiAttestatoRouteImport.update({
   id: '/dati-attestato',
   path: '/dati-attestato',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CorsoGiaCompletatoRoute = CorsoGiaCompletatoRouteImport.update({
+  id: '/corso-gia-completato',
+  path: '/corso-gia-completato',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CorsoRoute = CorsoRouteImport.update({
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/attivazione': typeof AttivazioneRoute
   '/auth': typeof AuthRouteWithChildren
   '/corso': typeof CorsoRoute
+  '/corso-gia-completato': typeof CorsoGiaCompletatoRoute
   '/dati-attestato': typeof DatiAttestatoRoute
   '/test': typeof TestRoute
   '/accesso/attiva': typeof AccessoAttivaRoute
@@ -110,6 +117,7 @@ export interface FileRoutesByTo {
   '/attestato': typeof AttestatoRoute
   '/attivazione': typeof AttivazioneRoute
   '/corso': typeof CorsoRoute
+  '/corso-gia-completato': typeof CorsoGiaCompletatoRoute
   '/dati-attestato': typeof DatiAttestatoRoute
   '/test': typeof TestRoute
   '/accesso/attiva': typeof AccessoAttivaRoute
@@ -126,6 +134,7 @@ export interface FileRoutesById {
   '/attivazione': typeof AttivazioneRoute
   '/auth': typeof AuthRouteWithChildren
   '/corso': typeof CorsoRoute
+  '/corso-gia-completato': typeof CorsoGiaCompletatoRoute
   '/dati-attestato': typeof DatiAttestatoRoute
   '/test': typeof TestRoute
   '/accesso/attiva': typeof AccessoAttivaRoute
@@ -143,6 +152,7 @@ export interface FileRouteTypes {
     | '/attivazione'
     | '/auth'
     | '/corso'
+    | '/corso-gia-completato'
     | '/dati-attestato'
     | '/test'
     | '/accesso/attiva'
@@ -157,6 +167,7 @@ export interface FileRouteTypes {
     | '/attestato'
     | '/attivazione'
     | '/corso'
+    | '/corso-gia-completato'
     | '/dati-attestato'
     | '/test'
     | '/accesso/attiva'
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/attivazione'
     | '/auth'
     | '/corso'
+    | '/corso-gia-completato'
     | '/dati-attestato'
     | '/test'
     | '/accesso/attiva'
@@ -188,6 +200,7 @@ export interface RootRouteChildren {
   AttivazioneRoute: typeof AttivazioneRoute
   AuthRoute: typeof AuthRouteWithChildren
   CorsoRoute: typeof CorsoRoute
+  CorsoGiaCompletatoRoute: typeof CorsoGiaCompletatoRoute
   DatiAttestatoRoute: typeof DatiAttestatoRoute
   TestRoute: typeof TestRoute
 }
@@ -206,6 +219,13 @@ declare module '@tanstack/react-router' {
       path: '/dati-attestato'
       fullPath: '/dati-attestato'
       preLoaderRoute: typeof DatiAttestatoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/corso-gia-completato': {
+      id: '/corso-gia-completato'
+      path: '/corso-gia-completato'
+      fullPath: '/corso-gia-completato'
+      preLoaderRoute: typeof CorsoGiaCompletatoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/corso': {
@@ -322,18 +342,10 @@ const rootRouteChildren: RootRouteChildren = {
   AttivazioneRoute: AttivazioneRoute,
   AuthRoute: AuthRouteWithChildren,
   CorsoRoute: CorsoRoute,
+  CorsoGiaCompletatoRoute: CorsoGiaCompletatoRoute,
   DatiAttestatoRoute: DatiAttestatoRoute,
   TestRoute: TestRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

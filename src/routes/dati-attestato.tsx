@@ -23,12 +23,13 @@ type Data = {
   ditta: string;
   licenseKey: string;
   licenseId: string;
+  puk: string;
 };
 
 function DatiAttestatoPage() {
   const navigate = useNavigate();
   const [ready, setReady] = useState(false);
-  const [activation, setActivation] = useState<{ licenseId: string; licenseKey: string } | null>(null);
+  const [activation, setActivation] = useState<{ licenseId: string; licenseKey: string; puk: string } | null>(null);
   const [form, setForm] = useState<Data>({
     nome: "",
     luogo: "",
@@ -37,6 +38,7 @@ function DatiAttestatoPage() {
     ditta: "",
     licenseKey: "",
     licenseId: "",
+    puk: "",
   });
   const [accepted, setAccepted] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -48,19 +50,19 @@ function DatiAttestatoPage() {
         navigate({ to: "/auth" });
         return;
       }
-      let act: { licenseId: string; licenseKey: string } | null = null;
+      let act: { licenseId: string; licenseKey: string; puk: string } | null = null;
       try {
         const raw = sessionStorage.getItem("activation");
         if (raw) act = JSON.parse(raw);
       } catch {
         // ignore
       }
-      if (!act?.licenseId) {
+      if (!act?.licenseId || !act?.puk) {
         navigate({ to: "/attivazione" });
         return;
       }
       setActivation(act);
-      setForm((f) => ({ ...f, licenseKey: act!.licenseKey, licenseId: act!.licenseId }));
+      setForm((f) => ({ ...f, licenseKey: act!.licenseKey, licenseId: act!.licenseId, puk: act!.puk }));
 
       // Prefill dai dati esistenti se già presenti
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -76,6 +78,7 @@ function DatiAttestatoPage() {
               ditta: parsed.ditta ?? "",
               licenseKey: act!.licenseKey,
               licenseId: act!.licenseId,
+              puk: act!.puk,
             });
           }
         } catch {

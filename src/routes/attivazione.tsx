@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, KeyRound } from "lucide-react";
 import { verifyAndActivateLicense, type ActivationReason } from "@/lib/license.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/attivazione")({
   head: () => ({ meta: [{ title: "Attivazione licenza — Area Corsi" }] }),
@@ -67,12 +68,28 @@ function AttivazionePage() {
       return;
     }
 
+    // Blocca se questo PUK ha già generato un certificato
+    try {
+      const { data: cert } = await supabase
+        .from("certificates")
+        .select("id")
+        .eq("puk_code", result.puk)
+        .maybeSingle();
+      if (cert) {
+        navigate({ to: "/corso-gia-completato" });
+        return;
+      }
+    } catch (err) {
+      console.error("cert check error", err);
+    }
+
     try {
       sessionStorage.setItem(
         "activation",
         JSON.stringify({
           licenseId: result.licenseId,
           licenseKey: result.licenseKey,
+          puk: result.puk,
         }),
       );
     } catch {

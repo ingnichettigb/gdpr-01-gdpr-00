@@ -12,7 +12,7 @@ export type ActivationReason =
   | "server_error";
 
 export type ActivationResult =
-  | { ok: true; licenseId: string; licenseKey: string }
+  | { ok: true; licenseId: string; licenseKey: string; puk: string }
   | { ok: false; reason: ActivationReason; code: string };
 
 const CODE_MAP: Record<ActivationReason, string> = {
@@ -119,6 +119,7 @@ export const verifyAndActivateLicense = createServerFn({ method: "POST" })
             ok: true,
             licenseId: lic.id,
             licenseKey: lic.license_key ?? licenseKey,
+            puk,
           };
         }
         return fail("puk_already_used");
@@ -155,6 +156,7 @@ export const verifyAndActivateLicense = createServerFn({ method: "POST" })
         ok: true,
         licenseId: lic.id,
         licenseKey: lic.license_key ?? licenseKey,
+        puk,
       };
     } catch (err) {
       console.error("verifyAndActivateLicense exception", err);

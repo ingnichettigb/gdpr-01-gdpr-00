@@ -72,9 +72,29 @@ function TestPage() {
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
-    const ok = isLessonCompleted("lezione1") && isLessonCompleted("lezione2");
-    setAllowed(ok);
-  }, []);
+    (async () => {
+      const ok = isLessonCompleted("lezione1") && isLessonCompleted("lezione2");
+      // Blocca se questo PUK ha già generato un certificato
+      try {
+        const raw = sessionStorage.getItem("activation");
+        const act = raw ? JSON.parse(raw) : null;
+        if (act?.puk) {
+          const { data: cert } = await supabase
+            .from("certificates")
+            .select("id")
+            .eq("puk_code", act.puk)
+            .maybeSingle();
+          if (cert) {
+            navigate({ to: "/corso-gia-completato" });
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("cert check error", err);
+      }
+      setAllowed(ok);
+    })();
+  }, [navigate]);
 
   const score = useMemo(
     () => QUESTIONS.reduce((s, q) => (answers[q.id] === q.correct ? s + 1 : s), 0),
@@ -137,11 +157,14 @@ function TestPage() {
                         certificate_number: cert,
                         license_id: a.licenseId,
                         license_key: a.licenseKey ?? null,
+                        puk_code: a.puk ?? null,
                         nome_snapshot: a.nome ?? null,
                         cf_snapshot: (a.cf ?? "").toUpperCase() || null,
                         ditta_snapshot: a.ditta ?? null,
                         luogo_nascita_snapshot: a.luogo || null,
                         data_nascita_snapshot: a.dataNascita || null,
+                        test_score: finalScore,
+                        test_result: "passed",
                       })
                       .select("id, issued_at")
                       .single();
