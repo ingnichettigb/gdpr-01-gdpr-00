@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle, Download, RotateCw } from "lucide-react";
 import { generateAttestatoPdf } from "@/lib/generateAttestatoPdf";
 import timbroAsset from "@/assets/timbro_corporate.png.asset.json";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseExternal } from "@/integrations/supabase/client.external";
 
 
 
