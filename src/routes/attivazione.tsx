@@ -76,7 +76,7 @@ function AttivazionePage() {
         .eq("puk_code", result.puk)
         .maybeSingle();
       if (cert) {
-        navigate({ to: "/corso-gia-completato" });
+        navigate({ to: "/attestato" });
         return;
       }
     } catch (err) {
