@@ -54,7 +54,7 @@ function AttestatoPage() {
       }
 
       if (pukCorrente) {
-        const { data: cert } = await supabase
+        const { data: cert } = await supabaseExternal
           .from("certificates")
           .select("*")
           .eq("puk_code", pukCorrente)
