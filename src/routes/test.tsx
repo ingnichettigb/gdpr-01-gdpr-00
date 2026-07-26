@@ -5,7 +5,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { isLessonCompleted } from "@/components/VideoLesson";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseExternal } from "@/integrations/supabase/client.external";
 
 export const Route = createFileRoute("/test")({
   head: () => ({
