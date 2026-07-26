@@ -89,10 +89,7 @@ export const verifyAndActivateLicense = createServerFn({ method: "POST" })
       }
       if (!lic) return fail("license_not_found");
 
-      // 2. Email della licenza deve corrispondere (case-insensitive)
-      if (lic.user_email && lic.user_email.toLowerCase() !== email) {
-        return fail("email_mismatch");
-      }
+      // 2. (rimosso) Il controllo email è ora sul PUK specifico, non sulla licenza
 
       // 3. Scadenza licenza
       if (lic.expires_at && lic.expires_at < nowIso) {
@@ -102,7 +99,7 @@ export const verifyAndActivateLicense = createServerFn({ method: "POST" })
       // 4. PUK: cerca in puk_codes per license_id + code
       const { data: pukRow, error: pukErr } = await supabaseExternal
         .from("puk_codes")
-        .select("id, used, used_at")
+        .select("id, used, used_at, assignee_email")
         .eq("license_id", lic.id)
         .eq("code", puk)
         .maybeSingle();
@@ -112,8 +109,14 @@ export const verifyAndActivateLicense = createServerFn({ method: "POST" })
       }
       if (!pukRow) return fail("puk_not_found");
 
-      // 5. PUK già usato: consenti solo se licenza già attivata (re-ingresso)
+      // 5. PUK già usato: verifica email sul PUK; consenti re-ingresso se licenza attivata
       if (pukRow.used === true) {
+        if (
+          pukRow.assignee_email &&
+          pukRow.assignee_email.toLowerCase() !== email
+        ) {
+          return fail("email_mismatch");
+        }
         if (lic.activated_at) {
           return {
             ok: true,
@@ -125,10 +128,10 @@ export const verifyAndActivateLicense = createServerFn({ method: "POST" })
         return fail("puk_already_used");
       }
 
-      // 6. Attivazione PUK (anti-race con eq(used,false))
+      // 6. Attivazione PUK (anti-race con eq(used,false)) + salva assignee_email
       const { data: pukUpd, error: pukUpdErr } = await supabaseExternal
         .from("puk_codes")
-        .update({ used: true, used_at: nowIso })
+        .update({ used: true, used_at: nowIso, assignee_email: email })
         .eq("id", pukRow.id)
         .eq("used", false)
         .select("id");
