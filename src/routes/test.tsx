@@ -5,7 +5,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { isLessonCompleted } from "@/components/VideoLesson";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseExternal } from "@/integrations/supabase/client.external";
 
 export const Route = createFileRoute("/test")({
   head: () => ({
@@ -79,7 +79,7 @@ function TestPage() {
         const raw = sessionStorage.getItem("activation");
         const act = raw ? JSON.parse(raw) : null;
         if (act?.puk) {
-          const { data: cert } = await supabase
+          const { data: cert } = await supabaseExternal
             .from("certificates")
             .select("id")
             .eq("puk_code", act.puk)
@@ -151,7 +151,7 @@ function TestPage() {
                   const raw = localStorage.getItem("attestato_data");
                   const a = raw ? JSON.parse(raw) : null;
                   if (a && a.licenseId) {
-                    const { data: inserted, error: insErr } = await supabase
+                    const { data: inserted, error: insErr } = await supabaseExternal
                       .from("certificates")
                       .insert({
                         certificate_number: cert,
