@@ -151,7 +151,7 @@ function TestPage() {
                   const raw = localStorage.getItem("attestato_data");
                   const a = raw ? JSON.parse(raw) : null;
                   if (a && a.licenseId) {
-                    const { data: inserted, error: insErr } = await supabase
+                    const { data: inserted, error: insErr } = await supabaseExternal
                       .from("certificates")
                       .insert({
                         certificate_number: cert,
