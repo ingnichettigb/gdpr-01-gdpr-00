@@ -36,6 +36,7 @@ type Data = {
 
 function AttestatoPage() {
   const navigate = useNavigate();
+  const checkCertFn = useServerFn(checkCertificateByPuk);
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [data, setData] = useState<Data | null>(null);
   const [flipped, setFlipped] = useState(false);
