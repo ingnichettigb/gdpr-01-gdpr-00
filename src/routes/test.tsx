@@ -85,11 +85,7 @@ function TestPage() {
         const raw = sessionStorage.getItem("activation");
         const act = raw ? JSON.parse(raw) : null;
         if (act?.puk) {
-          const { data: cert } = await supabaseExternal
-            .from("certificates")
-            .select("id")
-            .eq("puk_code", act.puk)
-            .maybeSingle();
+          const cert = await checkCertFn({ data: { puk: act.puk } });
           if (cert) {
             navigate({ to: "/corso-gia-completato" });
             return;
