@@ -71,6 +71,8 @@ const PASS_THRESHOLD = 2;
 
 function TestPage() {
   const navigate = useNavigate();
+  const checkCertFn = useServerFn(checkCertificateByPuk);
+  const saveCertFn = useServerFn(saveCertificate);
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
