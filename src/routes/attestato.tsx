@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Download, RotateCw } from "lucide-react";
 import { generateAttestatoPdf } from "@/lib/generateAttestatoPdf";
 import timbroAsset from "@/assets/timbro_corporate.png.asset.json";
-import { supabaseExternal } from "@/integrations/supabase/client.external";
+import { checkCertificateByPuk } from "@/lib/certificate.functions";
 
 
 
