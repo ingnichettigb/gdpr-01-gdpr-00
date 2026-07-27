@@ -1,11 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { isLessonCompleted } from "@/components/VideoLesson";
-import { supabaseExternal } from "@/integrations/supabase/client.external";
+import {
+  checkCertificateByPuk,
+  saveCertificate,
+} from "@/lib/certificate.functions";
 
 export const Route = createFileRoute("/test")({
   head: () => ({
