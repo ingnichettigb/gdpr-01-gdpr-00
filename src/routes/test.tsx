@@ -1,11 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { isLessonCompleted } from "@/components/VideoLesson";
-import { supabaseExternal } from "@/integrations/supabase/client.external";
+import {
+  checkCertificateByPuk,
+  saveCertificate,
+} from "@/lib/certificate.functions";
 
 export const Route = createFileRoute("/test")({
   head: () => ({
@@ -67,6 +71,8 @@ const PASS_THRESHOLD = 2;
 
 function TestPage() {
   const navigate = useNavigate();
+  const checkCertFn = useServerFn(checkCertificateByPuk);
+  const saveCertFn = useServerFn(saveCertificate);
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -79,11 +85,7 @@ function TestPage() {
         const raw = sessionStorage.getItem("activation");
         const act = raw ? JSON.parse(raw) : null;
         if (act?.puk) {
-          const { data: cert } = await supabaseExternal
-            .from("certificates")
-            .select("id")
-            .eq("puk_code", act.puk)
-            .maybeSingle();
+          const cert = await checkCertFn({ data: { puk: act.puk } });
           if (cert) {
             navigate({ to: "/corso-gia-completato" });
             return;
@@ -151,9 +153,8 @@ function TestPage() {
                   const raw = localStorage.getItem("attestato_data");
                   const a = raw ? JSON.parse(raw) : null;
                   if (a && a.licenseId) {
-                    const { data: inserted, error: insErr } = await supabaseExternal
-                      .from("certificates")
-                      .insert({
+                    const res = await saveCertFn({
+                      data: {
                         certificate_number: cert,
                         license_id: a.licenseId,
                         license_key: a.licenseKey ?? null,
@@ -165,19 +166,16 @@ function TestPage() {
                         data_nascita_snapshot: a.dataNascita || null,
                         test_score: finalScore,
                         test_result: "passed",
-                      })
-                      .select("id, issued_at")
-                      .single();
-                    if (insErr) {
-                      console.error("Errore salvataggio certificato:", insErr);
-                    } else if (inserted) {
+                      },
+                    });
+                    if (!res.ok) {
+                      console.error("Errore salvataggio certificato:", res.error);
+                    } else {
+                      localStorage.setItem("attestato_cert_id", res.id);
+                      localStorage.setItem("attestato_issued_at", res.issued_at);
                       localStorage.setItem(
-                        "attestato_cert_id",
-                        inserted.id,
-                      );
-                      localStorage.setItem(
-                        "attestato_issued_at",
-                        inserted.issued_at,
+                        "attestato_cert_number",
+                        res.certificate_number,
                       );
                     }
                   }

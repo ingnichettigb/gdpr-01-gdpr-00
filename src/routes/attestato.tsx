@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Download, RotateCw } from "lucide-react";
 import { generateAttestatoPdf } from "@/lib/generateAttestatoPdf";
 import timbroAsset from "@/assets/timbro_corporate.png.asset.json";
-import { supabaseExternal } from "@/integrations/supabase/client.external";
+import { checkCertificateByPuk } from "@/lib/certificate.functions";
 
 
 
@@ -35,6 +36,7 @@ type Data = {
 
 function AttestatoPage() {
   const navigate = useNavigate();
+  const checkCertFn = useServerFn(checkCertificateByPuk);
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [data, setData] = useState<Data | null>(null);
   const [flipped, setFlipped] = useState(false);
@@ -54,11 +56,7 @@ function AttestatoPage() {
       }
 
       if (pukCorrente) {
-        const { data: cert } = await supabaseExternal
-          .from("certificates")
-          .select("*")
-          .eq("puk_code", pukCorrente)
-          .maybeSingle();
+        const cert = await checkCertFn({ data: { puk: pukCorrente } });
         if (cert) {
           setAllowed(true);
           setData({
@@ -73,6 +71,8 @@ function AttestatoPage() {
           return;
         }
       }
+
+
 
       // 2) Fallback al flusso legacy (localStorage) — nessun certificato ancora salvato
       const passed = localStorage.getItem(PASSED_KEY) === "true";

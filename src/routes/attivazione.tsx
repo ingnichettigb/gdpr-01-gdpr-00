@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, KeyRound } from "lucide-react";
 import { verifyAndActivateLicense, type ActivationReason } from "@/lib/license.functions";
-import { supabaseExternal } from "@/integrations/supabase/client.external";
+import { checkCertificateByPuk } from "@/lib/certificate.functions";
 
 export const Route = createFileRoute("/attivazione")({
   head: () => ({ meta: [{ title: "Attivazione licenza — Area Corsi" }] }),
@@ -33,6 +33,7 @@ const MESSAGES: Record<ActivationReason, string> = {
 function AttivazionePage() {
   const navigate = useNavigate();
   const activateFn = useServerFn(verifyAndActivateLicense);
+  const checkCertFn = useServerFn(checkCertificateByPuk);
   const [email, setEmail] = useState("");
   const [licenseKey, setLicenseKey] = useState("");
   const [puk, setPuk] = useState("");
@@ -70,11 +71,7 @@ function AttivazionePage() {
 
     // Blocca se questo PUK ha già generato un certificato
     try {
-      const { data: cert } = await supabaseExternal
-        .from("certificates")
-        .select("id")
-        .eq("puk_code", result.puk)
-        .maybeSingle();
+      const cert = await checkCertFn({ data: { puk: result.puk } });
       if (cert) {
         navigate({ to: "/attestato" });
         return;
