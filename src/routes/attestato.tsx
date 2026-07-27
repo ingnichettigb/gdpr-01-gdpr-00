@@ -56,11 +56,7 @@ function AttestatoPage() {
       }
 
       if (pukCorrente) {
-        const { data: cert } = await supabaseExternal
-          .from("certificates")
-          .select("*")
-          .eq("puk_code", pukCorrente)
-          .maybeSingle();
+        const cert = await checkCertFn({ data: { puk: pukCorrente } });
         if (cert) {
           setAllowed(true);
           setData({
@@ -75,6 +71,8 @@ function AttestatoPage() {
           return;
         }
       }
+
+
 
       // 2) Fallback al flusso legacy (localStorage) — nessun certificato ancora salvato
       const passed = localStorage.getItem(PASSED_KEY) === "true";
