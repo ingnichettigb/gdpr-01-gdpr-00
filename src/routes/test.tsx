@@ -153,9 +153,8 @@ function TestPage() {
                   const raw = localStorage.getItem("attestato_data");
                   const a = raw ? JSON.parse(raw) : null;
                   if (a && a.licenseId) {
-                    const { data: inserted, error: insErr } = await supabaseExternal
-                      .from("certificates")
-                      .insert({
+                    const res = await saveCertFn({
+                      data: {
                         certificate_number: cert,
                         license_id: a.licenseId,
                         license_key: a.licenseKey ?? null,
@@ -167,19 +166,16 @@ function TestPage() {
                         data_nascita_snapshot: a.dataNascita || null,
                         test_score: finalScore,
                         test_result: "passed",
-                      })
-                      .select("id, issued_at")
-                      .single();
-                    if (insErr) {
-                      console.error("Errore salvataggio certificato:", insErr);
-                    } else if (inserted) {
+                      },
+                    });
+                    if (!res.ok) {
+                      console.error("Errore salvataggio certificato:", res.error);
+                    } else {
+                      localStorage.setItem("attestato_cert_id", res.id);
+                      localStorage.setItem("attestato_issued_at", res.issued_at);
                       localStorage.setItem(
-                        "attestato_cert_id",
-                        inserted.id,
-                      );
-                      localStorage.setItem(
-                        "attestato_issued_at",
-                        inserted.issued_at,
+                        "attestato_cert_number",
+                        res.certificate_number,
                       );
                     }
                   }
