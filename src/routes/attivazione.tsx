@@ -33,6 +33,7 @@ const MESSAGES: Record<ActivationReason, string> = {
 function AttivazionePage() {
   const navigate = useNavigate();
   const activateFn = useServerFn(verifyAndActivateLicense);
+  const checkCertFn = useServerFn(checkCertificateByPuk);
   const [email, setEmail] = useState("");
   const [licenseKey, setLicenseKey] = useState("");
   const [puk, setPuk] = useState("");
