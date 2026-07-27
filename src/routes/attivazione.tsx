@@ -71,11 +71,7 @@ function AttivazionePage() {
 
     // Blocca se questo PUK ha già generato un certificato
     try {
-      const { data: cert } = await supabaseExternal
-        .from("certificates")
-        .select("id")
-        .eq("puk_code", result.puk)
-        .maybeSingle();
+      const cert = await checkCertFn({ data: { puk: result.puk } });
       if (cert) {
         navigate({ to: "/attestato" });
         return;
