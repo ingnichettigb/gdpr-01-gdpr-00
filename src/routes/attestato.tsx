@@ -38,6 +38,7 @@ function AttestatoPage() {
   const navigate = useNavigate();
   const checkCertFn = useServerFn(checkCertificateByPuk);
   const [allowed, setAllowed] = useState<boolean | null>(null);
+  const [noActivationFound, setNoActivationFound] = useState(false);
   const [data, setData] = useState<Data | null>(null);
   const [flipped, setFlipped] = useState(false);
   const [certNumber, setCertNumber] = useState<string>("");
@@ -45,7 +46,10 @@ function AttestatoPage() {
 
   useEffect(() => {
     (async () => {
-      // 1) Prova a leggere il certificato da Supabase usando il PUK corrente
+      // 1) Prova a leggere il certificato da Supabase usando il PUK corrente.
+      // Cerca prima in sessionStorage (attivazione appena fatta in questa sessione),
+      // poi come fallback in localStorage (attivazione fatta in questo stesso
+      // browser, anche in una sessione precedente).
       let pukCorrente: string | null = null;
       try {
         const raw = sessionStorage.getItem("activation");
@@ -53,6 +57,15 @@ function AttestatoPage() {
         pukCorrente = act?.puk ?? null;
       } catch {
         // ignore
+      }
+      if (!pukCorrente) {
+        try {
+          const raw = localStorage.getItem("lastActivation");
+          const act = raw ? JSON.parse(raw) : null;
+          pukCorrente = act?.puk ?? null;
+        } catch {
+          // ignore
+        }
       }
 
       if (pukCorrente) {
@@ -70,6 +83,11 @@ function AttestatoPage() {
           setIssuedAt(cert.issued_at ?? "");
           return;
         }
+      } else {
+        // Nessun riferimento PUK trovato in nessuno storage: non sappiamo se
+        // l'utente ha superato il test o no, semplicemente non abbiamo modo
+        // di identificarlo. Messaggio diverso da "non hai superato il test".
+        setNoActivationFound(true);
       }
 
 
@@ -104,6 +122,24 @@ function AttestatoPage() {
   if (allowed === null) return null;
 
   if (!allowed) {
+    if (noActivationFound) {
+      return (
+        <main className="min-h-screen bg-background flex items-center justify-center px-4">
+          <div className="max-w-md text-center space-y-4">
+            <AlertTriangle className="h-12 w-12 mx-auto text-destructive" />
+            <h1 className="text-2xl font-bold">Attestato non trovato in questo browser</h1>
+            <p className="text-muted-foreground">
+              Se hai già completato il corso su un altro dispositivo o browser,
+              inserisci di nuovo la tua licenza e il tuo codice PUK per recuperare
+              l'attestato.
+            </p>
+            <Button onClick={() => navigate({ to: "/attivazione" })}>
+              Recupera il tuo attestato
+            </Button>
+          </div>
+        </main>
+      );
+    }
     return (
       <main className="min-h-screen bg-background flex items-center justify-center px-4">
         <div className="max-w-md text-center space-y-4">
