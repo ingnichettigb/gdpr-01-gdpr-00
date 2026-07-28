@@ -69,7 +69,23 @@ function AttivazionePage() {
       return;
     }
 
-    // Blocca se questo PUK ha già generato un certificato
+    // Salva il riferimento all'attivazione (sessionStorage per la sessione corrente,
+    // localStorage come fallback comodo per rientrare da un browser diverso senza
+    // dover rifare l'attivazione ogni volta). Va fatto SEMPRE, prima di qualsiasi
+    // redirect, altrimenti /attestato non trova il PUK da cercare su Supabase.
+    const activationPayload = {
+      licenseId: result.licenseId,
+      licenseKey: result.licenseKey,
+      puk: result.puk,
+    };
+    try {
+      sessionStorage.setItem("activation", JSON.stringify(activationPayload));
+      localStorage.setItem("lastActivation", JSON.stringify(activationPayload));
+    } catch {
+      // ignore
+    }
+
+    // Se questo PUK ha già generato un certificato, porta direttamente all'attestato
     try {
       const cert = await checkCertFn({ data: { puk: result.puk } });
       if (cert) {
@@ -80,18 +96,6 @@ function AttivazionePage() {
       console.error("cert check error", err);
     }
 
-    try {
-      sessionStorage.setItem(
-        "activation",
-        JSON.stringify({
-          licenseId: result.licenseId,
-          licenseKey: result.licenseKey,
-          puk: result.puk,
-        }),
-      );
-    } catch {
-      // ignore
-    }
     navigate({ to: "/dati-attestato" });
   }
 
