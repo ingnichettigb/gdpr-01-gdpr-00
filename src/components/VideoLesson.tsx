@@ -17,15 +17,33 @@ interface VideoLessonProps {
   saveIntervalMs?: number;
 }
 
-const keys = (id: string) => ({
-  progress: `progress_${id}`,
-  max: `max_progress_${id}`,
-  completed: `completed_${id}`,
-});
+// Legge il PUK dell'attivazione corrente (stessa fonte usata in tutto il resto
+// dell'app: sessionStorage.activation, popolato da attivazione.tsx). Serve per
+// scopare le chiavi di avanzamento video PER PUK, cosi' due PUK diversi usati
+// nello stesso browser non condividono lo stesso stato di completamento.
+function currentPuk(): string {
+  if (typeof window === "undefined") return "no-puk";
+  try {
+    const raw = sessionStorage.getItem("activation");
+    const act = raw ? JSON.parse(raw) : null;
+    return act?.puk ?? "no-puk";
+  } catch {
+    return "no-puk";
+  }
+}
+
+const keys = (id: string) => {
+  const puk = currentPuk();
+  return {
+    progress: `progress_${puk}_${id}`,
+    max: `max_progress_${puk}_${id}`,
+    completed: `completed_${puk}_${id}`,
+  };
+};
 
 export function isLessonCompleted(videoId: string): boolean {
   if (typeof window === "undefined") return false;
-  return localStorage.getItem(`completed_${videoId}`) === "true";
+  return localStorage.getItem(`completed_${currentPuk()}_${videoId}`) === "true";
 }
 
 export function VideoLesson({
