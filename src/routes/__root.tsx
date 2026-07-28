@@ -1,7 +1,10 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { RotateCcw } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import appCss from "../styles.css?url";
+
+const DEV_EMAIL = "ingnichettigb@gmail.com";
 
 function NotFoundComponent() {
   return (
@@ -70,6 +73,20 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  // Il pulsante di reset è visibile SOLO se l'email verificata in questa sessione
+  // (via OTP, stesso flusso usato dagli utenti reali) coincide con l'email sviluppatore.
+  // Controllo lato client, calcolato solo dopo il mount per evitare mismatch SSR.
+  const [isDev, setIsDev] = useState(false);
+
+  useEffect(() => {
+    try {
+      const verified = sessionStorage.getItem("verified_email");
+      setIsDev(!!verified && verified.toLowerCase() === DEV_EMAIL);
+    } catch {
+      setIsDev(false);
+    }
+  }, []);
+
   const handleReset = () => {
     if (typeof window === "undefined") return;
     if (!window.confirm("Sei sicuro di voler resettare il primo accesso? Verranno cancellati tutti i dati e i progressi del corso. I tuoi dati anagrafici verranno proposti di nuovo per essere confermati.")) {
@@ -99,14 +116,16 @@ function RootComponent() {
 
   return (
     <>
-      <button
-        onClick={handleReset}
-        className="fixed bottom-3 left-3 z-[9999] flex items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive shadow-sm hover:bg-destructive/20 print:hidden"
-        title="Resetta primo accesso"
-      >
-        <RotateCcw className="h-3.5 w-3.5" />
-        Reset Primo Accesso
-      </button>
+      {isDev && (
+        <button
+          onClick={handleReset}
+          className="fixed bottom-3 left-3 z-[9999] flex items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive shadow-sm hover:bg-destructive/20 print:hidden"
+          title="Resetta primo accesso"
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
+          Reset Primo Accesso
+        </button>
+      )}
       <Outlet />
     </>
   );
