@@ -1,10 +1,6 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
-import { RotateCcw } from "lucide-react";
-import { useEffect, useState } from "react";
 
 import appCss from "../styles.css?url";
-
-const DEV_EMAIL = "ingnichettigb@gmail.com";
 
 function NotFoundComponent() {
   return (
@@ -73,59 +69,8 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  // Il pulsante di reset è visibile SOLO se l'email verificata in questa sessione
-  // (via OTP, stesso flusso usato dagli utenti reali) coincide con l'email sviluppatore.
-  // Controllo lato client, calcolato solo dopo il mount per evitare mismatch SSR.
-  const [isDev, setIsDev] = useState(false);
-
-  useEffect(() => {
-    try {
-      const verified = sessionStorage.getItem("verified_email");
-      setIsDev(!!verified && verified.toLowerCase() === DEV_EMAIL);
-    } catch {
-      setIsDev(false);
-    }
-  }, []);
-
-  const handleReset = () => {
-    if (typeof window === "undefined") return;
-    if (!window.confirm("Sei sicuro di voler resettare il primo accesso? Verranno cancellati tutti i dati e i progressi del corso. I tuoi dati anagrafici verranno proposti di nuovo per essere confermati.")) {
-      return;
-    }
-    // Preserve last entered user data to prefill the onboarding form
-    const lastData = localStorage.getItem("attestato_data");
-    // Clear all local and session storage
-    localStorage.clear();
-    sessionStorage.clear();
-    // Clear all cookies
-    const cookies = document.cookie.split(";");
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i];
-      const eqPos = cookie.indexOf("=");
-      const name = eqPos > -1 ? cookie.substring(0, eqPos).trim() : cookie.trim();
-      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
-      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;domain=" + window.location.hostname + ";";
-    }
-    // Restore last data as prefill so the user can quickly confirm
-    if (lastData) {
-      localStorage.setItem("attestato_prefill", lastData);
-    }
-    // Hard reload to initial onboarding page
-    window.location.href = "/";
-  };
-
   return (
     <>
-      {isDev && (
-        <button
-          onClick={handleReset}
-          className="fixed bottom-3 left-3 z-[9999] flex items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive shadow-sm hover:bg-destructive/20 print:hidden"
-          title="Resetta primo accesso"
-        >
-          <RotateCcw className="h-3.5 w-3.5" />
-          Reset Primo Accesso
-        </button>
-      )}
       <Outlet />
     </>
   );
