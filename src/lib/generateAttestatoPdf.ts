@@ -117,7 +117,10 @@ const TOPICS: { title: string; items: string[] }[] = [
   },
 ];
 
-export async function generateAttestatoPdf(data: AttestatoData): Promise<void> {
+export async function buildAttestatoPdfBytes(
+  data: AttestatoData,
+  stampUrl: string,
+): Promise<{ pdfBytes: Uint8Array; slug: string }> {
   const pdfDoc = await PDFDocument.create();
   pdfDoc.setTitle(`Attestato ${data.nome}`);
   pdfDoc.setAuthor("Corporate Boost Service");
@@ -304,7 +307,7 @@ export async function generateAttestatoPdf(data: AttestatoData): Promise<void> {
 
   // Stamp above the signature
   try {
-    const stampResp = await fetch(timbroAsset.url);
+    const stampResp = await fetch(stampUrl);
     const stampBytes = await stampResp.arrayBuffer();
     const stampImg = await pdfDoc.embedPng(stampBytes);
     const stampW = 130;
@@ -413,6 +416,16 @@ export async function generateAttestatoPdf(data: AttestatoData): Promise<void> {
     .replace(/[^a-zA-Z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "")
     .toUpperCase();
+
+  return { pdfBytes, slug };
+}
+
+/**
+ * Wrapper lato client: genera il PDF (stesso builder condiviso col server)
+ * e forza il download nel browser. Comportamento identico a prima.
+ */
+export async function generateAttestatoPdf(data: AttestatoData): Promise<void> {
+  const { pdfBytes, slug } = await buildAttestatoPdfBytes(data, timbroAsset.url);
 
   const blob = new Blob([pdfBytes as BlobPart], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
