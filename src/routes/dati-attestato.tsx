@@ -15,6 +15,40 @@ export const Route = createFileRoute("/dati-attestato")({
 
 const STORAGE_KEY = "attestato_data";
 
+// Formato codice fiscale italiano: 6 lettere, 2 cifre, 1 lettera, 2 cifre,
+// 1 lettera, 3 cifre, 1 lettera (16 caratteri). Controllo SOLO di formato
+// (posizione lettere/numeri), NON il calcolo puntuale su nome/cognome/comune/data.
+const CF_PATTERN_TYPES: ("L" | "D")[] = [
+  "L", "L", "L", "L", "L", "L",
+  "D", "D",
+  "L",
+  "D", "D",
+  "L",
+  "D", "D", "D",
+  "L",
+];
+const CF_REGEX = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/;
+
+// Filtra i caratteri digitati in tempo reale: accetta solo lettere nelle
+// posizioni che richiedono lettere e solo cifre in quelle che richiedono cifre,
+// scartando silenziosamente i caratteri fuori posto (es. una lettera dove
+// serve un numero non viene inserita, non blocca la digitazione del resto).
+function maskCodiceFiscale(raw: string): string {
+  const clean = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  let out = "";
+  for (const ch of clean) {
+    if (out.length >= 16) break;
+    const expected = CF_PATTERN_TYPES[out.length];
+    const isLetter = /[A-Z]/.test(ch);
+    const isDigit = /[0-9]/.test(ch);
+    if ((expected === "L" && isLetter) || (expected === "D" && isDigit)) {
+      out += ch;
+    }
+  }
+  return out;
+}
+
+
 type Data = {
   nome: string;
   luogo: string;
@@ -29,6 +63,7 @@ type Data = {
 function DatiAttestatoPage() {
   const navigate = useNavigate();
   const [ready, setReady] = useState(false);
+  const [cfTouched, setCfTouched] = useState(false);
   const [activation, setActivation] = useState<{ licenseId: string; licenseKey: string; puk: string } | null>(null);
   const [form, setForm] = useState<Data>({
     nome: "",
@@ -96,9 +131,12 @@ function DatiAttestatoPage() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
+          const cfOk = CF_REGEX.test(form.cf);
+          if (!cfOk) setCfTouched(true);
           if (
             !form.nome.trim() ||
             !form.cf.trim() ||
+            !cfOk ||
             !form.ditta.trim() ||
             !accepted
           )
@@ -167,11 +205,27 @@ function DatiAttestatoPage() {
             id="cf"
             required
             value={form.cf}
-            onChange={(e) => setForm({ ...form, cf: e.target.value.toUpperCase() })}
+            onChange={(e) =>
+              setForm({ ...form, cf: maskCodiceFiscale(e.target.value) })
+            }
+            onBlur={() => setCfTouched(true)}
             placeholder="RSSMRA85T10A562S"
             style={{ textTransform: "uppercase" }}
             maxLength={16}
+            aria-invalid={cfTouched && form.cf.length > 0 && !CF_REGEX.test(form.cf)}
+            className={
+              cfTouched && form.cf.length > 0 && !CF_REGEX.test(form.cf)
+                ? "border-destructive focus-visible:ring-destructive"
+                : undefined
+            }
           />
+          {cfTouched && form.cf.length > 0 && !CF_REGEX.test(form.cf) && (
+            <p className="text-sm text-destructive">
+              Codice fiscale non valido: correggi, rivedi bene il codice
+              fiscale (16 caratteri: 6 lettere, 2 numeri, 1 lettera, 2 numeri,
+              1 lettera, 3 numeri, 1 lettera).
+            </p>
+          )}
         </div>
 
         <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-[13px] text-amber-900 flex gap-2">
