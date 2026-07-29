@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-const APP_BASE_URL = "https://02-gdpr-00.corporateboostservice.eu";
+const APP_BASE_URL = "https://01-gdpr.corporateboostservice.eu";
 
 /**
  * Genera il PDF dell'attestato lato server e lo invia via Resend:
