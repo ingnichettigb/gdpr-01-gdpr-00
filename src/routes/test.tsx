@@ -14,7 +14,7 @@ import {
 export const Route = createFileRoute("/test")({
   head: () => ({
     meta: [
-      { title: "Test finale — Corso Privacy per Incaricati" },
+      { title: "Test finale — Corso My Privacy" },
       {
         name: "description",
         content: "Test finale a scelta multipla del corso privacy per incaricati.",
