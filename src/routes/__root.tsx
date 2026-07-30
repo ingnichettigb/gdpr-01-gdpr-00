@@ -39,8 +39,6 @@ export const Route = createRootRoute({
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Area Formazione — Corporate Boost Service" },
       { name: "twitter:description", content: "Dashboard del corso privacy per incaricati. Accedi ai moduli video e al test finale." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/KpxO50outrfP9aG6HrsccB4u7qC3/social-images/social-1784016595820-SCREEN_SHOT_PER_GDPR_CORSO_INCARICATI_02-GDPR_00.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/KpxO50outrfP9aG6HrsccB4u7qC3/social-images/social-1784016595820-SCREEN_SHOT_PER_GDPR_CORSO_INCARICATI_02-GDPR_00.webp" },
     ],
     links: [
       {
