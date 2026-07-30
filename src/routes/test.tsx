@@ -141,17 +141,32 @@ function TestPage() {
               0,
             );
             if (finalScore >= PASS_THRESHOLD) {
+              // Legge subito il PUK corrente per scopare TUTTE le chiavi
+              // localStorage collegate a questo test. Senza questo, cambiando
+              // PUK nello stesso browser si rischia di riusare un numero
+              // certificato gia' assegnato a un'altra persona (violazione
+              // UNIQUE su Supabase, salvataggio silenziosamente fallito).
+              const rawData = localStorage.getItem("attestato_data");
+              const parsedData = rawData ? JSON.parse(rawData) : null;
+              const currentPukForCert: string = parsedData?.puk ?? "no-puk";
+              const certKey = `attestato_cert_number_${currentPukForCert}`;
+
               localStorage.setItem("test_passed", "true");
-              if (!localStorage.getItem("attestato_cert_number")) {
+              localStorage.setItem(`test_passed_${currentPukForCert}`, "true");
+
+              if (!localStorage.getItem(certKey)) {
                 const d = new Date();
                 const pad = (n: number) => String(n).padStart(2, "0");
-                const cert = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-                localStorage.setItem("attestato_cert_number", cert);
+                const pukSuffix = currentPukForCert
+                  .replace(/[^A-Za-z0-9]/g, "")
+                  .slice(-5)
+                  .toUpperCase();
+                const cert = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}-${pukSuffix}`;
+                localStorage.setItem(certKey, cert);
 
                 // Persist certificate to Supabase (immutable record)
                 try {
-                  const raw = localStorage.getItem("attestato_data");
-                  const a = raw ? JSON.parse(raw) : null;
+                  const a = parsedData;
                   if (a && a.licenseId) {
                     const res = await saveCertFn({
                       data: {
@@ -175,12 +190,13 @@ function TestPage() {
                         email_sent: res.email_sent,
                         email_error: res.email_error,
                       });
+                      localStorage.setItem(`attestato_cert_id_${currentPukForCert}`, res.id);
+                      localStorage.setItem(`attestato_issued_at_${currentPukForCert}`, res.issued_at);
+                      localStorage.setItem(certKey, res.certificate_number);
+                      // Compatibilita' con eventuale codice legacy non ancora scopato
+                      localStorage.setItem("attestato_cert_number", res.certificate_number);
                       localStorage.setItem("attestato_cert_id", res.id);
                       localStorage.setItem("attestato_issued_at", res.issued_at);
-                      localStorage.setItem(
-                        "attestato_cert_number",
-                        res.certificate_number,
-                      );
                     }
                   }
                 } catch (err) {
