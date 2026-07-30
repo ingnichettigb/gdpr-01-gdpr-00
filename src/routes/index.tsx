@@ -118,7 +118,7 @@ function Dashboard() {
       <div className="max-w-4xl mx-auto space-y-10">
         <header className="text-center space-y-3">
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight" style={{ color: prussian }}>
-            Corso Privacy per Incaricati
+            Corso My Privacy
           </h1>
           <h2 className="text-xl sm:text-2xl font-bold italic" style={{ color: prussian }}>
             Guida Pratica per l'Addetto e l'Incaricato
