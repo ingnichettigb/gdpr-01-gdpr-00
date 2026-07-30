@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/corso")({
   head: () => ({
     meta: [
-      { title: "Corso Privacy per Incaricati — Corporate Boost Service" },
+      { title: "Corso My Privacy — Corporate Boost Service" },
       {
         name: "description",
         content:
@@ -95,7 +95,7 @@ function CorsoPage() {
       <div className="max-w-3xl mx-auto space-y-8">
         <header>
           <h1 className="text-3xl font-bold tracking-tight" style={{ color: "#003153" }}>
-            Corso Privacy per Incaricati
+            Corso My Privacy
           </h1>
           <p className="text-muted-foreground mt-2">
             Segui i moduli in sequenza. Usa il carosello in basso per rivedere quelli
