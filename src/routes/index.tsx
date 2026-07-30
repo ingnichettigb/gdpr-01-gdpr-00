@@ -67,13 +67,13 @@ function Landing() {
   const prussian = "#003153";
   return (
     <main
-      className="min-h-screen bg-background flex items-center justify-center px-4 py-10"
-      style={{ color: prussian }}
+      className="min-h-screen flex items-center justify-center px-4 py-10"
+      style={{ color: prussian, backgroundColor: "#f6f6f7" }}
     >
       <div className="max-w-xl w-full space-y-6 text-center">
         <Award className="h-14 w-14 mx-auto text-primary" />
         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-          Corso Privacy per Incaricati
+          Corso My Privacy
         </h1>
         <p className="text-base sm:text-lg" style={{ opacity: 0.85 }}>
           Attivazione in 3 passaggi:
