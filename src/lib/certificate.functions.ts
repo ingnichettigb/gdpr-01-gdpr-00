@@ -20,16 +20,18 @@ async function sendAttestatoEmail(cert: {
   data_nascita_snapshot: string | null;
   certificate_number: string;
   issued_at: string;
-}, toEmail: string | null, ccEmail: string | null) {
+}, toEmail: string | null, ccEmail: string | null): Promise<{ sent: boolean; error: string | null }> {
   try {
     if (!toEmail) {
-      console.error("sendAttestatoEmail: nessuna email destinatario (licenses.user_email mancante)");
-      return;
+      const msg = "nessuna email destinatario (licenses.user_email mancante)";
+      console.error("sendAttestatoEmail:", msg);
+      return { sent: false, error: msg };
     }
     const resendKey = process.env.RESEND_API_KEY;
     if (!resendKey) {
-      console.error("sendAttestatoEmail: RESEND_API_KEY mancante");
-      return;
+      const msg = "RESEND_API_KEY mancante";
+      console.error("sendAttestatoEmail:", msg);
+      return { sent: false, error: msg };
     }
 
     const { buildAttestatoPdfBytes } = await import("@/lib/generateAttestatoPdf");
@@ -87,9 +89,13 @@ async function sendAttestatoEmail(cert: {
     if (!resendResp.ok) {
       const text = await resendResp.text();
       console.error("sendAttestatoEmail: Resend error", resendResp.status, text);
+      return { sent: false, error: `Resend error ${resendResp.status}: ${text}` };
     }
+    return { sent: true, error: null };
   } catch (err) {
+    const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
     console.error("sendAttestatoEmail exception", err);
+    return { sent: false, error: msg };
   }
 }
 
@@ -153,7 +159,7 @@ const saveSchema = z.object({
 });
 
 export type SaveCertificateResult =
-  | { ok: true; id: string; issued_at: string; certificate_number: string }
+  | { ok: true; id: string; issued_at: string; certificate_number: string; email_sent?: boolean; email_error?: string | null }
   | { ok: false; error: string; existing?: CertificateRow };
 
 /**
@@ -213,6 +219,7 @@ export const saveCertificate = createServerFn({ method: "POST" })
       // Fatto in background rispetto alla risposta al client, ma awaited qui per garantirne
       // il completamento nell'ambiente serverless; eventuali errori non bloccano mai
       // il salvataggio del certificato, gia' avvenuto con successo sopra.
+      let emailResult: { sent: boolean; error: string | null } = { sent: false, error: "non tentato" };
       try {
         const [{ data: lic }, { data: pukRow }] = await Promise.all([
           data.license_id
@@ -222,7 +229,7 @@ export const saveCertificate = createServerFn({ method: "POST" })
             ? supabaseExternal.from("puk_codes").select("assignee_email").eq("code", data.puk_code).maybeSingle()
             : Promise.resolve({ data: null }),
         ]);
-        await sendAttestatoEmail(
+        emailResult = await sendAttestatoEmail(
           {
             nome_snapshot: data.nome_snapshot ?? null,
             cf_snapshot: data.cf_snapshot ?? null,
@@ -236,7 +243,9 @@ export const saveCertificate = createServerFn({ method: "POST" })
           pukRow?.assignee_email ?? null,
         );
       } catch (err) {
+        const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
         console.error("saveCertificate: invio email fallito", err);
+        emailResult = { sent: false, error: msg };
       }
 
       return {
@@ -244,6 +253,8 @@ export const saveCertificate = createServerFn({ method: "POST" })
         id: inserted.id,
         issued_at: inserted.issued_at,
         certificate_number: inserted.certificate_number,
+        email_sent: emailResult.sent,
+        email_error: emailResult.error,
       };
     } catch (err) {
       console.error("saveCertificate exception", err);
