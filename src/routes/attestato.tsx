@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Download, RotateCw } from "lucide-react";
-import { generateAttestatoPdf } from "@/lib/generateAttestatoPdf";
+import { generateAttestatoPdf, TOPICS } from "@/lib/generateAttestatoPdf";
 import timbroAsset from "@/assets/timbro_corporate.png.asset.json";
 import { checkCertificateByPuk } from "@/lib/certificate.functions";
 
@@ -214,7 +214,7 @@ function AttestatoPage() {
 
         {/* FRONTE */}
         <section
-          className={`${flipped ? "hidden" : "block"} print:block bg-white text-slate-900 shadow-lg rounded-md aspect-[1.414/1] relative overflow-hidden border-[10px] border-double border-emerald-700 p-8 print:shadow-none print:rounded-none print:border-emerald-700`}
+          className={`${flipped ? "hidden" : "block"} print:block bg-[#e9f6e9] text-slate-900 shadow-lg rounded-md aspect-[1.414/1] relative overflow-hidden border-[10px] border-double border-emerald-700 p-8 print:shadow-none print:rounded-none print:border-emerald-700`}
         >
           <div className="absolute inset-4 border border-emerald-700/40 rounded" />
           <div className="relative h-full flex flex-col items-center justify-center text-center">
@@ -260,7 +260,7 @@ function AttestatoPage() {
               General Data Protection Regulation (GDPR) — Regolamento UE 2016/679
             </p>
             <p className="mt-1 text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
-              Guida Pratica per l'Addetto e l'Incaricato
+              My Privacy corso completo — 4 h
             </p>
             {certNumber && (
               <p className="mt-2 text-xs font-bold tracking-wider text-slate-800">
@@ -301,7 +301,7 @@ function AttestatoPage() {
 
         {/* RETRO */}
         <section
-          className={`${flipped ? "block" : "hidden"} print:block print:mt-0 bg-white text-slate-900 shadow-lg rounded-md aspect-[1.414/1] relative overflow-hidden border-[10px] border-double border-emerald-700 p-6 print:shadow-none print:rounded-none print:break-before-page`}
+          className={`${flipped ? "block" : "hidden"} print:block print:mt-0 bg-[#e9f6e9] text-slate-900 shadow-lg rounded-md aspect-[1.414/1] relative overflow-hidden border-[10px] border-double border-emerald-700 p-6 print:shadow-none print:rounded-none print:break-before-page`}
         >
           <div className="absolute inset-4 border border-emerald-700/40 rounded" />
           <div className="relative h-full flex flex-col justify-center">
@@ -312,72 +312,17 @@ function AttestatoPage() {
               Argomenti del Corso – GDPR &amp; Privacy Operativa
             </h2>
             <p className="text-center text-[11px] text-slate-600 italic leading-tight">
-              GDPR — Guida Pratica per l'Addetto e l'Incaricato
+              GDPR — My Privacy corso completo
             </p>
 
-            <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-[11px] text-slate-800 leading-tight">
-              <TopicGroup
-                title="Principi del GDPR"
-                items={[
-                  "Regolamento UE 2016/679",
-                  "Privacy come processo continuo",
-                  "Accountability e responsabilizzazione del titolare",
-                ]}
-              />
-              <TopicGroup
-                title="Programma di Adeguamento Annuale"
-                items={[
-                  "Revisione documentazione privacy (PIA, registro trattamenti)",
-                  "Aggiornamento nomine interne ed esterne",
-                  "Verifica informative e clausole contrattuali",
-                  "Valutazione privacy by design & by default",
-                  "DPIA e gestione data breach",
-                ]}
-              />
-              <TopicGroup
-                title="Misure di Sicurezza Tecniche e Organizzative"
-                items={[
-                  "Controllo accessi fisici e digitali",
-                  "Password sicure: requisiti, custodia e gestione",
-                  "Autenticazione a due fattori (2FA)",
-                  "Gestione salvaschermo e protezione postazione",
-                ]}
-              />
-              <TopicGroup
-                title="Backup e Protezione dei Dati"
-                items={[
-                  "Tipologie di backup: completo, incrementale, differenziale",
-                  "Backup locale e cloud",
-                  "Verifica dell'esito del backup",
-                  "Procedure di ripristino e continuità operativa",
-                  "Buone pratiche quotidiane",
-                ]}
-              />
-              <TopicGroup
-                title="Gestione Sicura dei Documenti Cartacei"
-                items={[
-                  "Custodia e trasporto dei documenti",
-                  "Divieti: copie non autorizzate, riciclo, distruzione impropria",
-                  "Protezione da accessi non autorizzati",
-                  "Comportamenti corretti in ufficio e fuori sede",
-                ]}
-              />
-              <TopicGroup
-                title="Comunicazioni e Telefonate Sicure"
-                items={[
-                  "Verifica dell'identità dell'interlocutore",
-                  "Evitare conversazioni in luoghi pubblici",
-                  "Non parlare ad alta voce in presenza di terzi",
-                ]}
-              />
-              <TopicGroup
-                title="Uso e Custodia dei Supporti Rimovibili"
-                items={[
-                  "Protezione da furto, calore, campi magnetici",
-                  "Prevenzione accessi non autorizzati",
-                  "Conservazione e trasporto sicuro",
-                ]}
-              />
+            <div className="mt-2 columns-2 gap-x-6 text-[8.5px] text-slate-800 leading-[1.15] [column-fill:_balance]">
+              {TOPICS.map((topic) => (
+                <TopicGroup
+                  key={topic.title}
+                  title={topic.title}
+                  items={topic.items}
+                />
+              ))}
             </div>
 
             <div className="mt-3 text-[10px] text-slate-500 text-center leading-tight">
@@ -415,9 +360,9 @@ function AttestatoPage() {
 
 function TopicGroup({ title, items }: { title: string; items: string[] }) {
   return (
-    <div className="flex flex-col">
-      <p className="font-bold text-emerald-800 leading-tight">{title}</p>
-      <ul className="list-disc list-inside text-slate-700 leading-tight mt-0.5 space-y-0">
+    <div className="flex flex-col break-inside-avoid mb-1.5">
+      <p className="font-bold text-emerald-800 leading-tight text-[9px]">{title}</p>
+      <ul className="list-disc list-inside text-slate-700 leading-[1.15] mt-0.5 space-y-0">
         {items.map((it, i) => (
           <li key={i}>{it}</li>
         ))}

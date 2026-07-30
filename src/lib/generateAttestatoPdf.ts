@@ -53,7 +53,7 @@ function formatDateIT(iso: string): string {
   }
 }
 
-const TOPICS: { title: string; items: string[] }[] = [
+export const TOPICS: { title: string; items: string[] }[] = [
   {
     title: "Lezione 1 — Introduzione al GDPR",
     items: [
