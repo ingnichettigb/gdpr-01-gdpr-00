@@ -171,6 +171,10 @@ function TestPage() {
                     if (!res.ok) {
                       console.error("Errore salvataggio certificato:", res.error);
                     } else {
+                      console.log("DEBUG email attestato:", {
+                        email_sent: res.email_sent,
+                        email_error: res.email_error,
+                      });
                       localStorage.setItem("attestato_cert_id", res.id);
                       localStorage.setItem("attestato_issued_at", res.issued_at);
                       localStorage.setItem(
