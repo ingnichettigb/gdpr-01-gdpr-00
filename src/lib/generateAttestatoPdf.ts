@@ -16,6 +16,7 @@ const SLATE: [number, number, number] = [0.2, 0.25, 0.33];
 const SLATE_LIGHT: [number, number, number] = [0.4, 0.45, 0.5];
 const AMBER_BG: [number, number, number] = [0.996, 0.953, 0.78];
 const AMBER_FG: [number, number, number] = [0.706, 0.443, 0.043];
+const PAGE_BG: [number, number, number] = [0.914, 0.965, 0.914]; // verdino chiaro
 
 function wrapText(
   text: string,
@@ -54,65 +55,104 @@ function formatDateIT(iso: string): string {
 
 const TOPICS: { title: string; items: string[] }[] = [
   {
-    title: "Principi del GDPR",
+    title: "Lezione 1 — Introduzione al GDPR",
     items: [
-      "Regolamento UE 2016/679",
-      "Privacy come processo continuo",
-      "Accountability e responsabilizzazione del titolare",
+      "Comprendere il quadro normativo europeo (Regolamento UE 2016/679)",
+      "Distinguere ambito di applicazione e trattamenti esclusi",
+      "Riconoscere cosa sono i dati personali e le loro categorie",
+      "Conoscere le principali novità del GDPR",
+      "Capire le tecniche di trattamento: profilazione, pseudonimizzazione, anonimizzazione, tracciamento",
+      "Acquisire consapevolezza sui rischi e sulla protezione dei dati",
+      "Saper applicare i concetti di trasparenza, liceità e identificabilità",
     ],
   },
   {
-    title: "Programma di Adeguamento Annuale",
+    title: "Lezione 2 — I 7 Principi del GDPR (Parte Prima)",
     items: [
-      "Revisione documentazione privacy (PIA, registro trattamenti)",
-      "Aggiornamento nomine interne ed esterne",
-      "Verifica informative e clausole contrattuali",
-      "Valutazione privacy by design & by default",
-      "DPIA e gestione data breach",
+      "Comprendere i primi tre principi fondamentali del GDPR",
+      "Liceità, correttezza, trasparenza – Base legale e fiducia",
+      "Limitazione della finalità – Vincolo agli scopi dichiarati",
+      "Minimizzazione dei dati – Solo i dati necessari",
     ],
   },
   {
-    title: "Misure di Sicurezza Tecniche e Organizzative",
+    title: "Lezione 3 — I 7 Principi del GDPR (Parte Seconda)",
     items: [
-      "Controllo accessi fisici e digitali",
-      "Password sicure: requisiti, custodia e gestione",
-      "Autenticazione a due fattori (2FA)",
-      "Gestione salvaschermo e protezione postazione",
+      "Comprendere il principio di Esattezza (dati corretti, aggiornati, privi di errori)",
+      "Applicare la Limitazione della Conservazione (tenere i dati solo per il tempo necessario)",
+      "Garantire Integrità e Riservatezza (protezione da accessi non autorizzati, perdite e modifiche)",
+      "Comprendere il principio di Responsabilizzazione (dimostrare la conformità con evidenze documentate)",
     ],
   },
   {
-    title: "Backup e Protezione dei Dati",
+    title: "Lezione 4 — L'Interessato",
     items: [
-      "Tipologie di backup: completo, incrementale, differenziale",
-      "Backup locale e cloud",
-      "Verifica dell'esito del backup",
-      "Procedure di ripristino e continuità operativa",
-      "Buone pratiche quotidiane",
+      "Comprendere chi è l'Interessato e il suo ruolo centrale nel GDPR",
+      "Conoscere i diritti fondamentali (accesso, rettifica, cancellazione, limitazione, portabilità, opposizione)",
+      "Imparare come esercitare i diritti (richiesta formale, tempi di risposta, gratuità, trasparenza)",
+      "Capire il funzionamento del consenso (requisiti, revoca, minori)",
     ],
   },
   {
-    title: "Gestione Sicura dei Documenti Cartacei",
+    title: "Lezione 5 — Le Figure Chiave del GDPR",
     items: [
-      "Custodia e trasporto dei documenti",
-      "Divieti: copie non autorizzate, riciclo, distruzione impropria",
-      "Protezione da accessi non autorizzati",
-      "Comportamenti corretti in ufficio e fuori sede",
+      "Comprendere l'organigramma privacy e i ruoli principali (Titolare, Responsabile, Incaricato, DPO)",
+      "Distinguere tra Titolare, Contitolare e Titolare Esterno",
+      "Conoscere le responsabilità del Responsabile del trattamento (interno ed esterno)",
+      "Identificare i soggetti più comuni nelle PMI (commercialista, ufficio paghe, selezione personale)",
+      "Definire ruolo e compiti dell'Addetto/Incaricato al trattamento",
+      "Capire quando è obbligatoria la nomina del DPO",
+      "Riconoscere il ruolo tecnico dell'Amministratore di Sistema",
     ],
   },
   {
-    title: "Comunicazioni e Telefonate Sicure",
+    title: "Lezione 6 — Un nuovo approccio alla privacy",
     items: [
-      "Verifica dell'identità dell'interlocutore",
-      "Evitare conversazioni in luoghi pubblici",
-      "Non parlare ad alta voce in presenza di terzi",
+      "Comprendere l'approccio proattivo, documentato e basato sul rischio",
+      "Privacy by design",
+      "Privacy by default",
+      "Registro delle attività di trattamento",
+      "Sicurezza del trattamento",
+      "Data breach",
+      "Valutazione d'impatto privacy (DPIA)",
     ],
   },
   {
-    title: "Uso e Custodia dei Supporti Rimovibili",
+    title: "Lezione 7 — Responsabilità e Sanzioni",
     items: [
-      "Protezione da furto, calore, campi magnetici",
-      "Prevenzione accessi non autorizzati",
-      "Conservazione e trasporto sicuro",
+      "Comprendere le conseguenze delle violazioni privacy",
+      "Capire come un sistema organizzato riduce rischi, costi e danni reputazionali",
+      "Conoscere i mezzi di ricorso",
+      "Conoscere le responsabilità",
+      "Conoscere le sanzioni",
+    ],
+  },
+  {
+    title: "Lezione 8 — Privacy come processo continuo",
+    items: [
+      "Costruire un sistema privacy aggiornato, efficace e dimostrabile",
+      "Applicare un programma di adeguamento annuale",
+      "Rafforzare la sicurezza (accessi, password, backup)",
+      "Implementare autenticazione a due fattori e misure avanzate",
+    ],
+  },
+  {
+    title: "Lezione 9 — Documenti cartacei",
+    items: [
+      "Non lasciare mai documenti incustoditi",
+      "Limitare l'asportazione dei documenti",
+      "Proteggere i documenti da sguardi non autorizzati",
+      "Evitare copie non necessarie",
+      "Custodire con attenzione i documenti sensibili",
+    ],
+  },
+  {
+    title: "Lezione 10 — Governance e Compliance GDPR",
+    items: [
+      "Comprendere i pilastri organizzativi del GDPR",
+      "Formalizzare ruoli e responsabilità con contratti e atti scritti",
+      "Gestire rapporti con fornitori esterni e nomine dei responsabili",
+      "Applicare misure di sicurezza indispensabili (antivirus, firewall, backup, MFA)",
     ],
   },
 ];
@@ -147,8 +187,20 @@ export async function buildAttestatoPdfBytes(
   // =============== PAGE 1 — FRONTE ===============
   const p1 = pdfDoc.addPage([W, H]);
 
+  // Sfondo verdino chiaro (fronte e retro)
+  const fillBackground = (page: import("pdf-lib").PDFPage) => {
+    page.drawRectangle({
+      x: 0,
+      y: 0,
+      width: W,
+      height: H,
+      color: rgb(...PAGE_BG),
+    });
+  };
+
   // Double border
   const drawBorder = (page: import("pdf-lib").PDFPage) => {
+    fillBackground(page);
     // outer
     page.drawRectangle({
       x: 14,
@@ -251,7 +303,7 @@ export async function buildAttestatoPdfBytes(
 
   // Amber pill
   y -= 18;
-  const pillText = "Guida Pratica per l'Addetto e l'Incaricato — 1 h";
+  const pillText = "My Privacy corso completo — 4 h";
   const pillW = fontBold.widthOfTextAtSize(pillText, 10) + 16;
   p1.drawRectangle({
     x: (W - pillW) / 2,
@@ -358,24 +410,50 @@ export async function buildAttestatoPdfBytes(
   y2 -= 14;
   centerText(
     p2,
-    "GDPR — Guida Pratica per l'Addetto e l'Incaricato",
+    "GDPR — My Privacy corso completo",
     y2,
     9,
     fontItalic,
     SLATE_LIGHT,
   );
 
-  y2 -= 22;
-  // Two columns
-  const colGap = 30;
-  const colW = (W - 120 - colGap) / 2;
-  const colX = [60, 60 + colW + colGap];
-  const colY = [y2, y2];
+  y2 -= 20;
+  // Colonne bilanciate in base al contenuto effettivo (2 colonne: il contenuto ci sta)
+  const columns = 2;
+  const colGap = 24;
+  const margin = 55;
+  const colW = (W - margin * 2 - colGap * (columns - 1)) / columns;
+  const colX = Array.from({ length: columns }, (_, i) => margin + i * (colW + colGap));
   const itemSize = 8.5;
   const titleSize = 10;
+  const lineH = 9.6;
+  const titleDrop = 12.5;
+  const topicGap = 7;
+
+  // Stima l'altezza di ogni lezione per bilanciare le colonne
+  const topicHeight = (t: (typeof TOPICS)[number]) => {
+    let h = titleDrop;
+    for (const it of t.items) {
+      h += wrapText(`• ${it}`, colW, font, itemSize).length * lineH;
+    }
+    return h + topicGap;
+  };
+
+  const colTotal = Array(columns).fill(0);
+  const assignment = TOPICS.map((t) => {
+    const h = topicHeight(t);
+    let minIdx = 0;
+    for (let i = 1; i < columns; i++) {
+      if (colTotal[i] < colTotal[minIdx]) minIdx = i;
+    }
+    colTotal[minIdx] += h;
+    return minIdx;
+  });
+
+  const colY = Array(columns).fill(y2);
 
   TOPICS.forEach((t, idx) => {
-    const col = idx % 2;
+    const col = assignment[idx];
     let cy = colY[col];
     p2.drawText(t.title, {
       x: colX[col],
@@ -384,7 +462,7 @@ export async function buildAttestatoPdfBytes(
       font: fontBold,
       color: rgb(...EMERALD),
     });
-    cy -= 14;
+    cy -= titleDrop;
     for (const it of t.items) {
       const wrapped = wrapText(`• ${it}`, colW, font, itemSize);
       for (const line of wrapped) {
@@ -395,10 +473,10 @@ export async function buildAttestatoPdfBytes(
           font,
           color: rgb(...SLATE),
         });
-        cy -= 11;
+        cy -= lineH;
       }
     }
-    cy -= 8;
+    cy -= topicGap;
     colY[col] = cy;
   });
 
