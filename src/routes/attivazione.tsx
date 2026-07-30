@@ -49,6 +49,18 @@ function AttivazionePage() {
     setEmail(verified);
   }, [navigate]);
 
+  // Precompila licenza/PUK se arrivati dal link diretto nell'email
+  // (es. ?licenza=TEST-...&puk=PUK-...), cosi' l'utente non deve copiare
+  // niente a mano.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const licenzaParam = params.get("licenza");
+    const pukParam = params.get("puk");
+    if (licenzaParam) setLicenseKey(licenzaParam.toUpperCase());
+    if (pukParam) setPuk(pukParam.toUpperCase());
+  }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
