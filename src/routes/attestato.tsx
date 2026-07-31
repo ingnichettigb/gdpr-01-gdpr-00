@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Download, RotateCw } from "lucide-react";
 import { generateAttestatoPdf, TOPICS } from "@/lib/generateAttestatoPdf";
+import { buildCertificateQrMatrix } from "@/lib/generateCertificateQr";
 import timbroAsset from "@/assets/timbro_corporate.png.asset.json";
 import { checkCertificateByPuk } from "@/lib/certificate.functions";
 
@@ -34,6 +35,63 @@ type Data = {
   ditta: string;
 };
 
+type QrMatrix = {
+  size: number;
+  isDark: (row: number, col: number) => boolean;
+};
+
+// Dimensione a schermo del QR (px) e margine di rispetto (in "moduli"),
+// stessi rapporti usati nel PDF (qrSize 55pt, quietZone 2 moduli) così il
+// QR appare visivamente coerente tra anteprima e download.
+const QR_DISPLAY_SIZE = 64;
+const QR_QUIET_ZONE = 2;
+
+/**
+ * Renderizza a schermo la stessa matrice QR usata da generateAttestatoPdf.ts,
+ * come SVG inline. Nota: nell'SVG l'asse Y è verso il basso, quindi qui non
+ * serve nessun flip di riga (a differenza del disegno su pdf-lib, dove l'asse
+ * Y è verso l'alto).
+ */
+function CertificateQrCode({ size, isDark }: QrMatrix) {
+  const moduleSize = QR_DISPLAY_SIZE / (size + QR_QUIET_ZONE * 2);
+  const modules: JSX.Element[] = [];
+
+  for (let row = 0; row < size; row++) {
+    for (let col = 0; col < size; col++) {
+      if (!isDark(row, col)) continue;
+      modules.push(
+        <rect
+          key={`${row}-${col}`}
+          x={(col + QR_QUIET_ZONE) * moduleSize}
+          y={(row + QR_QUIET_ZONE) * moduleSize}
+          width={moduleSize}
+          height={moduleSize}
+          fill="#1f2937"
+        />,
+      );
+    }
+  }
+
+  return (
+    <svg
+      width={QR_DISPLAY_SIZE}
+      height={QR_DISPLAY_SIZE}
+      viewBox={`0 0 ${QR_DISPLAY_SIZE} ${QR_DISPLAY_SIZE}`}
+      role="img"
+      aria-label="QR code di verifica dell'attestato"
+    >
+      <rect
+        x={0}
+        y={0}
+        width={QR_DISPLAY_SIZE}
+        height={QR_DISPLAY_SIZE}
+        fill="#ffffff"
+      />
+      {modules}
+    </svg>
+  );
+}
+
 function AttestatoPage() {
   const navigate = useNavigate();
   const checkCertFn = useServerFn(checkCertificateByPuk);
@@ -43,6 +101,7 @@ function AttestatoPage() {
   const [flipped, setFlipped] = useState(false);
   const [certNumber, setCertNumber] = useState<string>("");
   const [issuedAt, setIssuedAt] = useState<string>("");
+  const [qrMatrix, setQrMatrix] = useState<QrMatrix | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -118,6 +177,39 @@ function AttestatoPage() {
       if (iss) setIssuedAt(iss);
     })();
   }, []);
+
+  // Genera la matrice QR per l'anteprima non appena abbiamo dati anagrafici
+  // e numero di certificato: stessi input (nome, CF, numero certificato,
+  // data di emissione ISO) usati da buildAttestatoPdfBytes, così il QR
+  // mostrato a schermo codifica esattamente lo stesso contenuto del PDF
+  // scaricato o inviato via email.
+  useEffect(() => {
+    if (!data || !certNumber) {
+      setQrMatrix(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const issuedDate = issuedAt ? new Date(issuedAt) : new Date();
+        const matrix = await buildCertificateQrMatrix({
+          nomeCompleto: data.nome,
+          codiceFiscale: data.cf.toUpperCase(),
+          certificateNumber: certNumber,
+          issuedAtIso: issuedDate.toISOString(),
+        });
+        if (!cancelled) setQrMatrix(matrix);
+      } catch (err) {
+        // Elemento accessorio: se la generazione fallisce, l'anteprima resta
+        // comunque utilizzabile, semplicemente senza QR (come già previsto
+        // lato PDF).
+        console.error("QR anteprima attestato: generazione fallita", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [data, certNumber, issuedAt]);
 
   if (allowed === null) return null;
 
@@ -284,6 +376,17 @@ function AttestatoPage() {
                 <p className="text-slate-600 text-xs">Data di rilascio</p>
                 <p className="font-semibold">{oggi}</p>
               </div>
+
+              {/* QR code di verifica: stessa posizione e stessi dati del PDF
+                  (a metà tra blocco data e timbro/firma). Elemento accessorio:
+                  se la matrice non è ancora pronta o la generazione fallisce,
+                  l'anteprima resta comunque completa senza QR. */}
+              <div className="flex flex-col items-center gap-1 px-2">
+                {qrMatrix && (
+                  <CertificateQrCode size={qrMatrix.size} isDark={qrMatrix.isDark} />
+                )}
+              </div>
+
               <div className="text-right relative">
                 <img
                   src={timbroAsset.url}
