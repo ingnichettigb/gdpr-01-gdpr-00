@@ -8,7 +8,7 @@ export const Route = createFileRoute("/auth")({
       {
         name: "description",
         content:
-          "Passaggio 1 di 3: verifichiamo che tu sia il proprietario della casella email.",
+          "Passaggio 1 di 4: verifichiamo che tu sia il proprietario della casella email.",
       },
     ],
   }),
