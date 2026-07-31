@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Award, AlertTriangle, Loader2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { checkTermsConsent } from "@/lib/consent.functions";
 
 export const Route = createFileRoute("/dati-attestato")({
   head: () => ({
@@ -62,6 +64,7 @@ type Data = {
 
 function DatiAttestatoPage() {
   const navigate = useNavigate();
+  const checkTermsFn = useServerFn(checkTermsConsent);
   const [ready, setReady] = useState(false);
   const [cfTouched, setCfTouched] = useState(false);
   const [activation, setActivation] = useState<{ licenseId: string; licenseKey: string; puk: string } | null>(null);
@@ -97,6 +100,22 @@ function DatiAttestatoPage() {
         return;
       }
       setActivation(act);
+
+      // Barriera di sicurezza: se questo PUK non ha ancora accettato le
+      // condizioni d'uso, non deve poter arrivare qui direttamente
+      // (es. URL diretto, bookmark) — si passa prima da /termini.
+      try {
+        const consent = await checkTermsFn({ data: { puk: act.puk } });
+        if (!consent.accepted) {
+          navigate({ to: "/termini" });
+          return;
+        }
+      } catch (err) {
+        console.error("Verifica consenso fallita:", err);
+        navigate({ to: "/termini" });
+        return;
+      }
+
       setForm((f) => ({ ...f, licenseKey: act!.licenseKey, licenseId: act!.licenseId, puk: act!.puk }));
 
       // Prefill dai dati esistenti se già presenti
@@ -154,7 +173,7 @@ function DatiAttestatoPage() {
       >
         <div className="text-center space-y-2">
           <Award className="h-10 w-10 mx-auto text-primary" />
-          <h1 className="text-2xl font-bold">Passaggio 3 di 3 — Dati attestato</h1>
+          <h1 className="text-2xl font-bold">Passaggio 4 di 4 — Dati attestato</h1>
           <p className="text-sm text-muted-foreground">
             Inserisci i tuoi dati. Verranno utilizzati per generare l'attestato
             al termine del corso.
