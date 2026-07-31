@@ -108,7 +108,7 @@ function AttivazionePage() {
       console.error("cert check error", err);
     }
 
-    navigate({ to: "/dati-attestato" });
+    navigate({ to: "/termini" });
   }
 
   return (
@@ -119,7 +119,7 @@ function AttivazionePage() {
             <KeyRound className="h-6 w-6 text-primary" />
           </div>
           <CardTitle className="text-center">
-            Passaggio 2 di 3 — Attiva la tua licenza
+            Passaggio 2 di 4 — Attiva la tua licenza
           </CardTitle>
           <p className="text-center text-sm text-muted-foreground">
             Inserisci il <strong>codice licenza</strong> e il <strong>codice PUK</strong>{" "}
