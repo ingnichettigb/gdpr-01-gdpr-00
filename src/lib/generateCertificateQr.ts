@@ -3,15 +3,11 @@ import { APP_NAME } from "@/lib/app-config";
 import { formatDateIT } from "@/lib/generateAttestatoPdf";
 
 /**
- * Generazione del QR code dell'attestato.
- *
- * Modulo puro, senza alcuna dipendenza da pdf-lib: riceve i dati del
- * certificato (già noti dopo l'insert in DB, quando certificate_number e
- * issued_at esistono) e ritorna i bytes PNG del QR, pronti per essere
- * embeddati nel PDF con lo stesso meccanismo già usato per il timbro
- * (pdfDoc.embedPng). Nessuna chiamata di rete: la libreria 'qrcode' genera
- * il PNG interamente lato server/edge, così i dati personali (nome,
- * cognome, codice fiscale) non lasciano mai il perimetro dell'app.
+ * Costruzione dei dati del QR code dell'attestato: payload JSON e matrice
+ * di moduli chiari/scuri, pronta per essere disegnata in
+ * generateAttestatoPdf.ts. Nessuna dipendenza da pdf-lib in questo file,
+ * nessuna chiamata di rete: i dati personali (nome, cognome, codice
+ * fiscale) non lasciano mai il perimetro dell'app.
  */
 
 const ENTE = "Corporate Boost Service";
@@ -45,11 +41,29 @@ function splitNomeCognome(nomeCompleto: string): { nome: string; cognome: string
   };
 }
 
+/**
+ * Rimuove i diacritici (é -> e, à -> a, ò -> o, ecc.), mantenendo solo
+ * caratteri ASCII.
+ *
+ * Necessario SOLO per il payload del QR, non per il testo stampato sul PDF
+ * (che resta accentato correttamente). Il QR in "byte mode" non porta con
+ * sé nessuna indicazione di charset (nessun marcatore ECI): molti lettori
+ * QR generici (fotocamera di smartphone, zbar, ecc.) assumono per default
+ * una codifica diversa da UTF-8 per i byte non-ASCII, e i caratteri
+ * accentati italiani arrivano corrotti (es. "é" letto come un carattere
+ * CJK a caso). L'ASCII puro invece è identico byte-per-byte in qualunque
+ * codifica, quindi è l'unica scelta davvero interoperabile per un payload
+ * pensato per essere letto da app di terzi.
+ */
+function stripDiacritics(s: string): string {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
 export function buildCertificateQrPayload(input: CertificateQrInput) {
   const { nome, cognome } = splitNomeCognome(input.nomeCompleto);
   return {
-    nome,
-    cognome,
+    nome: stripDiacritics(nome),
+    cognome: stripDiacritics(cognome),
     codice_fiscale: input.codiceFiscale.toUpperCase(),
     corso: APP_NAME,
     ore: ORE_CORSO,
@@ -60,20 +74,17 @@ export function buildCertificateQrPayload(input: CertificateQrInput) {
 }
 
 /**
- * Genera ed embedda il QR nel PDF: nessuna chiamata di rete a servizi esterni
- * e nessuna dipendenza da pdf-lib qui.
+ * Genera la matrice del QR (moduli chiari/scuri), da disegnare direttamente
+ * con page.drawRectangle in generateAttestatoPdf.ts — nessuna dipendenza da
+ * pdf-lib qui, nessuna chiamata di rete: i dati personali non lasciano mai
+ * il perimetro dell'app.
  *
- * Deliberatamente NON usiamo QRCode.toBuffer/toDataURL (rendering PNG): quella
- * via passa internamente per 'pngjs', che a sua volta si appoggia al modulo
- * 'zlib' di Node per la compressione. In un ambiente edge/serverless (Cloudflare
- * Workers) o in un bundle browser, 'zlib' puo' non essere disponibile o
- * comportarsi diversamente, causando un fallimento silenzioso (assorbito dal
- * try/catch) senza che il QR compaia nel PDF.
- *
- * QRCode.create(...) invece calcola solo la matrice di moduli chiari/scuri
- * (puro calcolo, nessuna I/O, nessuna dipendenza da zlib/canvas): la
- * disegniamo poi modulo per modulo con page.drawRectangle, esattamente come
- * gia' si fa per i bordi della pagina. Funziona identicamente in qualsiasi
+ * Deliberatamente NON usiamo QRCode.toBuffer/toDataURL (rendering PNG):
+ * quella via passa internamente per 'pngjs', che si appoggia al modulo
+ * 'zlib' di Node per la compressione — disponibile lato server ma non
+ * affidabile in un bundle browser, dove falliva silenziosamente.
+ * QRCode.create(...) calcola solo la matrice (puro calcolo, nessuna I/O,
+ * nessuna dipendenza da zlib/canvas): funziona identicamente in qualsiasi
  * runtime JS.
  */
 export type CertificateQrMatrix = {
