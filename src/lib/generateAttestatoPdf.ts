@@ -277,7 +277,7 @@ export async function buildAttestatoPdfBytes(
   y -= 22;
   centerText(
     p1,
-    "ha partecipato e superato con esito positivo il corso in e-learning",
+    "Corso e-learning completato e test finale superato con successo",
     y,
     11,
     font,

@@ -251,7 +251,7 @@ function AttestatoPage() {
             )}
 
             <p className="mt-3 text-sm text-slate-700">
-              ha partecipato e superato con esito positivo il corso in e-learning
+              Corso e-learning completato e test finale superato con successo
             </p>
             <h2 className="mt-1 text-xl font-bold italic text-emerald-800 max-w-2xl leading-snug">
               "Il Regolamento europeo in materia di protezione dei dati personali"
