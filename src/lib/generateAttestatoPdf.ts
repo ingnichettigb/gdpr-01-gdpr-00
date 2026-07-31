@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb, degrees, PageSizes } from "pdf-lib";
 import timbroAsset from "@/assets/timbro_corporate.png.asset.json";
+import { generateCertificateQrPng } from "@/lib/generateCertificateQr";
 
 export type AttestatoData = {
   nome: string;
@@ -40,7 +41,7 @@ function wrapText(
   return lines;
 }
 
-function formatDateIT(iso: string): string {
+export function formatDateIT(iso: string): string {
   if (!iso) return "";
   try {
     return new Date(iso).toLocaleDateString("it-IT", {
@@ -374,6 +375,36 @@ export async function buildAttestatoPdfBytes(
     });
   } catch {
     // ignore stamp failure
+  }
+
+  // QR code di verifica: a metà strada tra il blocco data (sinistra) e il
+  // timbro/firma (destra), sulla stessa riga del footer. Elemento
+  // accessorio: un suo eventuale fallimento non deve mai bloccare la
+  // generazione dell'attestato.
+  try {
+    const qrPng = await generateCertificateQrPng({
+      nomeCompleto: data.nome,
+      codiceFiscale: cfUpper,
+      certificateNumber: data.certNumber,
+      issuedAtIso: issuedDate.toISOString(),
+    });
+    const qrImg = await pdfDoc.embedPng(qrPng);
+    const qrSize = 55;
+
+    const dateLabelW = font.widthOfTextAtSize("Data di rilascio", 8);
+    const dateValueW = fontBold.widthOfTextAtSize(oggi, 11);
+    const dateCenterX = 60 + Math.max(dateLabelW, dateValueW) / 2;
+    const stampCenterX = sigX + sigW / 2 + 10;
+    const qrCenterX = (dateCenterX + stampCenterX) / 2;
+
+    p1.drawImage(qrImg, {
+      x: qrCenterX - qrSize / 2,
+      y: footerY - 2,
+      width: qrSize,
+      height: qrSize,
+    });
+  } catch {
+    // il QR e' un elemento accessorio: non deve mai bloccare l'attestato
   }
 
   p1.drawLine({
