@@ -15,7 +15,7 @@ export const Route = createFileRoute("/auth/")({
       {
         name: "description",
         content:
-          "Passaggio 1 di 3: verifichiamo che tu sia il proprietario della casella email.",
+          "Passaggio 1 di 4: verifichiamo che tu sia il proprietario della casella email.",
       },
     ],
   }),
@@ -59,7 +59,7 @@ function AuthStep1() {
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
             <Mail className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="text-center">Passaggio 1 di 3 — Verifica email</CardTitle>
+          <CardTitle className="text-center">Passaggio 1 di 4 — Verifica email</CardTitle>
           <p className="text-center text-sm text-muted-foreground">
             Verifichiamo che tu sia effettivamente il proprietario della casella
             di posta. Ti invieremo un codice a 6 cifre da inserire nella
