@@ -1,6 +1,6 @@
 import { PDFDocument, StandardFonts, rgb, degrees, PageSizes } from "pdf-lib";
 import timbroAsset from "@/assets/timbro_corporate.png.asset.json";
-import { generateCertificateQrPng } from "@/lib/generateCertificateQr";
+import { buildCertificateQrMatrix } from "@/lib/generateCertificateQr";
 
 export type AttestatoData = {
   nome: string;
@@ -382,14 +382,15 @@ export async function buildAttestatoPdfBytes(
   // accessorio: un suo eventuale fallimento non deve mai bloccare la
   // generazione dell'attestato.
   try {
-    const qrPng = await generateCertificateQrPng({
+    const { size, isDark } = await buildCertificateQrMatrix({
       nomeCompleto: data.nome,
       codiceFiscale: cfUpper,
       certificateNumber: data.certNumber,
       issuedAtIso: issuedDate.toISOString(),
     });
-    const qrImg = await pdfDoc.embedPng(qrPng);
     const qrSize = 55;
+    const quietZone = 2; // margine minimo per la leggibilità della scansione
+    const moduleSize = qrSize / (size + quietZone * 2);
 
     const dateLabelW = font.widthOfTextAtSize("Data di rilascio", 8);
     const dateValueW = fontBold.widthOfTextAtSize(oggi, 11);
@@ -397,14 +398,33 @@ export async function buildAttestatoPdfBytes(
     const stampCenterX = sigX + sigW / 2 + 10;
     const qrCenterX = (dateCenterX + stampCenterX) / 2;
 
-    p1.drawImage(qrImg, {
-      x: qrCenterX - qrSize / 2,
-      y: footerY - 2,
+    const qrOriginX = qrCenterX - qrSize / 2;
+    const qrOriginY = footerY - 2;
+
+    // Sfondo bianco pieno (quiet zone inclusa) per il massimo contrasto in scansione
+    p1.drawRectangle({
+      x: qrOriginX,
+      y: qrOriginY,
       width: qrSize,
       height: qrSize,
+      color: rgb(1, 1, 1),
     });
-  } catch {
-    // il QR e' un elemento accessorio: non deve mai bloccare l'attestato
+
+    for (let row = 0; row < size; row++) {
+      for (let col = 0; col < size; col++) {
+        if (!isDark(row, col)) continue;
+        p1.drawRectangle({
+          x: qrOriginX + (col + quietZone) * moduleSize,
+          // asse Y del PDF verso l'alto: la riga 0 della matrice è in alto
+          y: qrOriginY + qrSize - (row + quietZone + 1) * moduleSize,
+          width: moduleSize,
+          height: moduleSize,
+          color: rgb(0.12, 0.16, 0.22),
+        });
+      }
+    }
+  } catch (err) {
+    console.error("QR attestato: generazione fallita", err);
   }
 
   p1.drawLine({

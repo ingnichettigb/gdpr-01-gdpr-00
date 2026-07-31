@@ -60,26 +60,38 @@ export function buildCertificateQrPayload(input: CertificateQrInput) {
 }
 
 /**
- * Genera il PNG del QR code (bytes pronti per pdfDoc.embedPng).
- * errorCorrectionLevel "M" per tollerare piccole imperfezioni di stampa
- * mantenendo una densità di dati contenuta (il payload è breve).
+ * Genera ed embedda il QR nel PDF: nessuna chiamata di rete a servizi esterni
+ * e nessuna dipendenza da pdf-lib qui.
+ *
+ * Deliberatamente NON usiamo QRCode.toBuffer/toDataURL (rendering PNG): quella
+ * via passa internamente per 'pngjs', che a sua volta si appoggia al modulo
+ * 'zlib' di Node per la compressione. In un ambiente edge/serverless (Cloudflare
+ * Workers) o in un bundle browser, 'zlib' puo' non essere disponibile o
+ * comportarsi diversamente, causando un fallimento silenzioso (assorbito dal
+ * try/catch) senza che il QR compaia nel PDF.
+ *
+ * QRCode.create(...) invece calcola solo la matrice di moduli chiari/scuri
+ * (puro calcolo, nessuna I/O, nessuna dipendenza da zlib/canvas): la
+ * disegniamo poi modulo per modulo con page.drawRectangle, esattamente come
+ * gia' si fa per i bordi della pagina. Funziona identicamente in qualsiasi
+ * runtime JS.
  */
-export async function generateCertificateQrPng(
+export type CertificateQrMatrix = {
+  size: number;
+  isDark: (row: number, col: number) => boolean;
+};
+
+export async function buildCertificateQrMatrix(
   input: CertificateQrInput,
-): Promise<Uint8Array> {
+): Promise<CertificateQrMatrix> {
   const payload = buildCertificateQrPayload(input);
   const json = JSON.stringify(payload);
 
-  const buffer = await QRCode.toBuffer(json, {
-    type: "png",
-    errorCorrectionLevel: "M",
-    margin: 1,
-    width: 300,
-    color: {
-      dark: "#1f2937",
-      light: "#00000000",
-    },
-  });
+  const qr = QRCode.create(json, { errorCorrectionLevel: "M" });
+  const { size, data } = qr.modules;
 
-  return new Uint8Array(buffer);
+  return {
+    size,
+    isDark: (row: number, col: number) => data[row * size + col] === 1,
+  };
 }
