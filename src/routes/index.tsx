@@ -1,7 +1,12 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { isLessonCompleted } from "@/components/VideoLesson";
-import { supabase } from "@/integrations/supabase/client";
+import { getUserId } from "@/lib/activation";
+import {
+  findActiveLicenseByEmail,
+  getCourseModules,
+  getCourseProgress,
+} from "@/lib/course.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,35 +33,37 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
-const STORAGE_KEY = "attestato_data";
-
 function HomePage() {
-  const navigate = useNavigate();
+  const findLicenseFn = useServerFn(findActiveLicenseByEmail);
   const [state, setState] = useState<"loading" | "landing" | "dashboard">("loading");
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.auth.getUser();
-      const signedIn = Boolean(data.user?.email);
-      let hasAttestato = false;
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          hasAttestato = Boolean(
-            parsed?.nome && parsed?.cf && parsed?.ditta && parsed?.licenseId,
-          );
-        }
-      } catch {
-        // ignore
-      }
-      if (signedIn && hasAttestato) {
+      // L'app non usa Supabase Auth: l'utente è identificato dall'attivazione
+      // (public.users.id salvato in sessionStorage/localStorage).
+      if (getUserId()) {
         setState("dashboard");
-      } else {
-        setState("landing");
+        return;
       }
+      const verified =
+        typeof window === "undefined"
+          ? null
+          : sessionStorage.getItem("verified_email");
+      if (verified) {
+        try {
+          const lic = await findLicenseFn({ data: { email: verified } });
+          if (lic.found) {
+            setState("dashboard");
+            return;
+          }
+        } catch (err) {
+          console.error("license lookup error", err);
+        }
+      }
+      setState("landing");
     })();
-  }, [navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (state === "loading") return null;
   if (state === "landing") return <Landing />;
