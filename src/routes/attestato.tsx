@@ -55,7 +55,7 @@ const QR_QUIET_ZONE = 2;
  */
 function CertificateQrCode({ size, isDark }: QrMatrix) {
   const moduleSize = QR_DISPLAY_SIZE / (size + QR_QUIET_ZONE * 2);
-  const modules: JSX.Element[] = [];
+  const modules: React.ReactElement[] = [];
 
   for (let row = 0; row < size; row++) {
     for (let col = 0; col < size; col++) {
