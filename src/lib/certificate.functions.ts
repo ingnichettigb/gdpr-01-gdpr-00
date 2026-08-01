@@ -1,8 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-const APP_BASE_URL = "https://01-gdpr.corporateboostservice.eu";
-
 /**
  * Genera il PDF dell'attestato lato server e lo invia via Resend:
  * - "to": email della ditta/acquirente (licenses.user_email)
@@ -35,21 +33,16 @@ async function sendAttestatoEmail(cert: {
     }
 
     const { buildAttestatoPdfBytes } = await import("@/lib/generateAttestatoPdf");
-    const timbroAsset = (await import("@/assets/timbro_corporate.png.asset.json")).default;
-    const stampUrl = `${APP_BASE_URL}${timbroAsset.url}`;
 
-    const { pdfBytes, slug } = await buildAttestatoPdfBytes(
-      {
-        nome: cert.nome_snapshot ?? "",
-        luogo: cert.luogo_nascita_snapshot ?? "",
-        dataNascita: cert.data_nascita_snapshot ?? "",
-        cf: cert.cf_snapshot ?? "",
-        ditta: cert.ditta_snapshot ?? "",
-        certNumber: cert.certificate_number,
-        issuedAt: cert.issued_at,
-      },
-      stampUrl,
-    );
+    const { pdfBytes, slug } = await buildAttestatoPdfBytes({
+      nome: cert.nome_snapshot ?? "",
+      luogo: cert.luogo_nascita_snapshot ?? "",
+      dataNascita: cert.data_nascita_snapshot ?? "",
+      cf: cert.cf_snapshot ?? "",
+      ditta: cert.ditta_snapshot ?? "",
+      certNumber: cert.certificate_number,
+      issuedAt: cert.issued_at,
+    });
 
     const pdfBase64 = Buffer.from(pdfBytes).toString("base64");
     const nome = cert.nome_snapshot ?? "il partecipante";
