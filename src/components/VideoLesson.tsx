@@ -27,13 +27,33 @@ interface VideoLessonProps {
 // nello stesso browser non condividono lo stesso stato di completamento.
 function currentPuk(): string {
   if (typeof window === "undefined") return "no-puk";
+  // 1) sessionStorage: attivazione appena fatta in questa sessione
   try {
     const raw = sessionStorage.getItem("activation");
     const act = raw ? JSON.parse(raw) : null;
-    return act?.puk ?? "no-puk";
+    if (act?.puk) return act.puk;
   } catch {
-    return "no-puk";
+    // ignore
   }
+  // 2) localStorage "attestato_data": sopravvive alla chiusura del browser,
+  // popolato quando l'utente compila i dati anagrafici (prima dei video).
+  try {
+    const raw = localStorage.getItem("attestato_data");
+    const data = raw ? JSON.parse(raw) : null;
+    if (data?.puk) return data.puk;
+  } catch {
+    // ignore
+  }
+  // 3) localStorage "lastActivation": sopravvive anch'esso, popolato subito
+  // dopo l'attivazione (anche prima di arrivare ai dati anagrafici).
+  try {
+    const raw = localStorage.getItem("lastActivation");
+    const act = raw ? JSON.parse(raw) : null;
+    if (act?.puk) return act.puk;
+  } catch {
+    // ignore
+  }
+  return "no-puk";
 }
 
 const keys = (id: string) => {
