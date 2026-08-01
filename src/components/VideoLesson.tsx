@@ -13,6 +13,10 @@ interface VideoLessonProps {
   locked?: boolean;
   /** Notify parent when completion state changes */
   onCompletedChange?: (completed: boolean) => void;
+  /** Completamento già registrato lato server (course_progress) */
+  serverCompleted?: boolean;
+  /** Chiamato a fine video: persistenza su course_progress */
+  onEnded?: () => void | Promise<void>;
   completionTolerance?: number;
   saveIntervalMs?: number;
 }
@@ -54,6 +58,8 @@ export function VideoLesson({
   hideTestButton = false,
   locked = false,
   onCompletedChange,
+  serverCompleted = false,
+  onEnded,
   completionTolerance = 1.5,
   saveIntervalMs = 5000,
 }: VideoLessonProps) {
