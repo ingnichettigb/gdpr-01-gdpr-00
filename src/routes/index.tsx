@@ -109,15 +109,33 @@ function Landing() {
 }
 
 function Dashboard() {
-  const [c1, setC1] = useState(false);
-  const [c2, setC2] = useState(false);
+  const modulesFn = useServerFn(getCourseModules);
+  const progressFn = useServerFn(getCourseProgress);
+  const [modules, setModules] = useState<
+    { id: string; title: string; order_index: number }[]
+  >([]);
+  const [completedIds, setCompletedIds] = useState<string[]>([]);
 
   useEffect(() => {
-    setC1(isLessonCompleted("lezione1"));
-    setC2(isLessonCompleted("lezione2"));
+    (async () => {
+      try {
+        const mods = await modulesFn({});
+        setModules(mods.modules);
+        const uid = getUserId();
+        if (uid) {
+          const progress = await progressFn({ data: { userId: uid } });
+          setCompletedIds(progress.completedModuleIds);
+        }
+      } catch (err) {
+        console.error("dashboard load error", err);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const allDone = c1 && c2;
+  const isDone = (id: string) => completedIds.includes(id);
+  const started = completedIds.length > 0;
+  const allDone = modules.length > 0 && modules.every((m) => isDone(m.id));
 
   const prussian = "#003153";
   return (
