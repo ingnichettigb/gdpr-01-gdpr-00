@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb, degrees, PageSizes } from "pdf-lib";
 import { TIMBRO_BASE64 } from "@/assets/timbroBase64";
+import { APP_CODE } from "@/lib/app-config";
 
 function base64ToUint8Array(base64: string): Uint8Array {
   if (typeof atob === "function") {
@@ -326,8 +327,10 @@ export async function buildAttestatoPdfBytes(
   });
   centerText(p1, pillText, y + 1, 10, fontBold, AMBER_FG);
 
-  // Certificate number
+  // Course code + Certificate number
   y -= 18;
+  centerText(p1, `Codice corso: ${APP_CODE}`, y, 9, font, SLATE);
+  y -= 13;
   centerText(p1, `Certificato n. ${data.certNumber}`, y, 10, fontBold, SLATE);
 
   // Long paragraph
@@ -541,7 +544,7 @@ export async function buildAttestatoPdfBytes(
     colY[col] = cy;
   });
 
-  const footerText = `Documento generato elettronicamente da Corporate Boost Service — ${oggi}`;
+  const footerText = `Documento generato elettronicamente da Corporate Boost Service — codice corso ${APP_CODE} — ${oggi}`;
   centerText(p2, footerText, 50, 8, font, SLATE_LIGHT);
 
   // =============== ENCRYPT / SAVE ===============
