@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Download, RotateCw } from "lucide-react";
 import { generateAttestatoPdf, TOPICS } from "@/lib/generateAttestatoPdf";
@@ -55,7 +55,7 @@ const QR_QUIET_ZONE = 2;
  */
 function CertificateQrCode({ size, isDark }: QrMatrix) {
   const moduleSize = QR_DISPLAY_SIZE / (size + QR_QUIET_ZONE * 2);
-  const modules: React.ReactElement[] = [];
+  const modules: ReactElement[] = [];
 
   for (let row = 0; row < size; row++) {
     for (let col = 0; col < size; col++) {
