@@ -131,7 +131,8 @@ export function VideoLesson({
     localStorage.setItem(k.completed, "true");
     localStorage.setItem(k.progress, "0");
     setCompleted(true);
-  }, [k.completed, k.progress]);
+    void onEnded?.();
+  }, [k.completed, k.progress, onEnded]);
 
   return (
     <div className="w-full space-y-3">
