@@ -89,6 +89,7 @@ function AttivazionePage() {
       licenseId: result.licenseId,
       licenseKey: result.licenseKey,
       puk: result.puk,
+      userId: result.userId,
     };
     try {
       sessionStorage.setItem("activation", JSON.stringify(activationPayload));
