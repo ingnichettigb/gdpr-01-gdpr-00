@@ -142,6 +142,8 @@ const saveSchema = z.object({
   license_id: z.string().min(1),
   license_key: z.string().nullable().optional(),
   puk_code: z.string().nullable().optional(),
+  user_id: z.string().uuid().nullable().optional(),
+  course_id: z.string().uuid().nullable().optional(),
   nome_snapshot: z.string().nullable().optional(),
   cf_snapshot: z.string().nullable().optional(),
   ditta_snapshot: z.string().nullable().optional(),
@@ -184,6 +186,17 @@ export const saveCertificate = createServerFn({ method: "POST" })
         }
       }
 
+      // course_id: sempre risolto da APP_CODE se non fornito dal client.
+      let courseId = data.course_id ?? null;
+      if (!courseId) {
+        try {
+          const { resolveCourseId } = await import("@/lib/course.server");
+          courseId = await resolveCourseId();
+        } catch (err) {
+          console.error("saveCertificate: course_id non risolto", err);
+        }
+      }
+
       const { data: inserted, error } = await supabaseExternal
         .from("certificates")
         .insert({
@@ -191,6 +204,8 @@ export const saveCertificate = createServerFn({ method: "POST" })
           license_id: data.license_id,
           license_key: data.license_key ?? null,
           puk_code: data.puk_code ?? null,
+          user_id: data.user_id ?? null,
+          course_id: courseId,
           nome_snapshot: data.nome_snapshot ?? null,
           cf_snapshot: data.cf_snapshot ?? null,
           ditta_snapshot: data.ditta_snapshot ?? null,

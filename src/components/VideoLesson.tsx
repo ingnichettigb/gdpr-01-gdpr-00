@@ -13,6 +13,10 @@ interface VideoLessonProps {
   locked?: boolean;
   /** Notify parent when completion state changes */
   onCompletedChange?: (completed: boolean) => void;
+  /** Completamento già registrato lato server (course_progress) */
+  serverCompleted?: boolean;
+  /** Chiamato a fine video: persistenza su course_progress */
+  onEnded?: () => void | Promise<void>;
   completionTolerance?: number;
   saveIntervalMs?: number;
 }
@@ -54,21 +58,23 @@ export function VideoLesson({
   hideTestButton = false,
   locked = false,
   onCompletedChange,
+  serverCompleted = false,
+  onEnded,
   completionTolerance = 1.5,
   saveIntervalMs = 5000,
 }: VideoLessonProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const k = keys(videoId);
 
-  const [completed, setCompleted] = useState(false);
+  const [completed, setCompleted] = useState(serverCompleted);
   const [maxProgress, setMaxProgress] = useState(0);
   const [showSkipWarning, setShowSkipWarning] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setCompleted(localStorage.getItem(k.completed) === "true");
+    setCompleted(serverCompleted || localStorage.getItem(k.completed) === "true");
     setMaxProgress(parseFloat(localStorage.getItem(k.max) ?? "0") || 0);
-  }, [videoId, k.completed, k.max]);
+  }, [videoId, serverCompleted, k.completed, k.max]);
 
   useEffect(() => {
     onCompletedChange?.(completed);
@@ -125,7 +131,8 @@ export function VideoLesson({
     localStorage.setItem(k.completed, "true");
     localStorage.setItem(k.progress, "0");
     setCompleted(true);
-  }, [k.completed, k.progress]);
+    void onEnded?.();
+  }, [k.completed, k.progress, onEnded]);
 
   return (
     <div className="w-full space-y-3">

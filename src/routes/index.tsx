@@ -1,7 +1,12 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { isLessonCompleted } from "@/components/VideoLesson";
-import { supabase } from "@/integrations/supabase/client";
+import { getUserId } from "@/lib/activation";
+import {
+  findActiveLicenseByEmail,
+  getCourseModules,
+  getCourseProgress,
+} from "@/lib/course.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,35 +33,37 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
-const STORAGE_KEY = "attestato_data";
-
 function HomePage() {
-  const navigate = useNavigate();
+  const findLicenseFn = useServerFn(findActiveLicenseByEmail);
   const [state, setState] = useState<"loading" | "landing" | "dashboard">("loading");
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.auth.getUser();
-      const signedIn = Boolean(data.user?.email);
-      let hasAttestato = false;
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          hasAttestato = Boolean(
-            parsed?.nome && parsed?.cf && parsed?.ditta && parsed?.licenseId,
-          );
-        }
-      } catch {
-        // ignore
-      }
-      if (signedIn && hasAttestato) {
+      // L'app non usa Supabase Auth: l'utente è identificato dall'attivazione
+      // (public.users.id salvato in sessionStorage/localStorage).
+      if (getUserId()) {
         setState("dashboard");
-      } else {
-        setState("landing");
+        return;
       }
+      const verified =
+        typeof window === "undefined"
+          ? null
+          : sessionStorage.getItem("verified_email");
+      if (verified) {
+        try {
+          const lic = await findLicenseFn({ data: { email: verified } });
+          if (lic.found) {
+            setState("dashboard");
+            return;
+          }
+        } catch (err) {
+          console.error("license lookup error", err);
+        }
+      }
+      setState("landing");
     })();
-  }, [navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (state === "loading") return null;
   if (state === "landing") return <Landing />;
@@ -102,15 +109,33 @@ function Landing() {
 }
 
 function Dashboard() {
-  const [c1, setC1] = useState(false);
-  const [c2, setC2] = useState(false);
+  const modulesFn = useServerFn(getCourseModules);
+  const progressFn = useServerFn(getCourseProgress);
+  const [modules, setModules] = useState<
+    { id: string; title: string; order_index: number }[]
+  >([]);
+  const [completedIds, setCompletedIds] = useState<string[]>([]);
 
   useEffect(() => {
-    setC1(isLessonCompleted("lezione1"));
-    setC2(isLessonCompleted("lezione2"));
+    (async () => {
+      try {
+        const mods = await modulesFn({});
+        setModules(mods.modules);
+        const uid = getUserId();
+        if (uid) {
+          const progress = await progressFn({ data: { userId: uid } });
+          setCompletedIds(progress.completedModuleIds);
+        }
+      } catch (err) {
+        console.error("dashboard load error", err);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const allDone = c1 && c2;
+  const isDone = (id: string) => completedIds.includes(id);
+  const started = completedIds.length > 0;
+  const allDone = modules.length > 0 && modules.every((m) => isDone(m.id));
 
   const prussian = "#003153";
   return (
@@ -130,64 +155,44 @@ function Dashboard() {
           <div className="pt-2">
             <Button asChild size="lg" style={{ backgroundColor: prussian, color: "#fff" }}>
               <Link to="/corso">
-                {c1 || c2 ? "Continua il corso" : "Inizia il corso"}
+                {started ? "Continua il corso" : "Inizia il corso"}
               </Link>
             </Button>
           </div>
         </header>
 
         <section className="grid gap-4 sm:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <PlayCircle className="h-5 w-5 text-primary" />
-                Modulo 1
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Guida Pratica per l'Addetto e l'Incaricato.
-              </p>
-              <div className="flex items-center justify-between">
-                {c1 ? (
-                  <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 dark:bg-green-950/30">
-                    <CheckCircle2 className="h-3 w-3 mr-1" /> Completato
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary">Da iniziare</Badge>
-                )}
-                <span className="text-xs text-muted-foreground">Video</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <PlayCircle className="h-5 w-5 text-primary" />
-                Modulo 2
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Privacy come processo continuo.
-              </p>
-              <div className="flex items-center justify-between">
-                {c2 ? (
-                  <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 dark:bg-green-950/30">
-                    <CheckCircle2 className="h-3 w-3 mr-1" /> Completato
-                  </Badge>
-                ) : c1 ? (
-                  <Badge variant="secondary">Disponibile</Badge>
-                ) : (
-                  <Badge variant="outline" className="opacity-70">
-                    <Lock className="h-3 w-3 mr-1" /> Bloccato
-                  </Badge>
-                )}
-                <span className="text-xs text-muted-foreground">Video</span>
-              </div>
-            </CardContent>
-          </Card>
+          {modules.map((m, i) => {
+            const done = isDone(m.id);
+            const unlocked = i === 0 || isDone(modules[i - 1]!.id);
+            return (
+              <Card key={m.id}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <PlayCircle className="h-5 w-5 text-primary" />
+                    Modulo {i + 1}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p className="text-sm text-muted-foreground">{m.title}</p>
+                  <div className="flex items-center justify-between">
+                    {done ? (
+                      <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 dark:bg-green-950/30">
+                        <CheckCircle2 className="h-3 w-3 mr-1" /> Completato
+                      </Badge>
+                    ) : unlocked ? (
+                      <Badge variant="secondary">Disponibile</Badge>
+                    ) : (
+                      <Badge variant="outline" className="opacity-70">
+                        <Lock className="h-3 w-3 mr-1" /> Bloccato
+                      </Badge>
+                    )}
+                    <span className="text-xs text-muted-foreground">Video</span>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
 
           <Card>
             <CardHeader className="pb-3">
