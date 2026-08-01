@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Loader2, KeyRound } from "lucide-react";
 import { verifyAndActivateLicense, type ActivationReason } from "@/lib/license.functions";
 import { checkCertificateByPuk } from "@/lib/certificate.functions";
+import { findActiveLicenseByEmail } from "@/lib/course.functions";
+import { getUserId } from "@/lib/activation";
 
 export const Route = createFileRoute("/attivazione")({
   head: () => ({ meta: [{ title: "Attivazione licenza — Area Corsi" }] }),
@@ -34,6 +36,7 @@ function AttivazionePage() {
   const navigate = useNavigate();
   const activateFn = useServerFn(verifyAndActivateLicense);
   const checkCertFn = useServerFn(checkCertificateByPuk);
+  const findLicenseFn = useServerFn(findActiveLicenseByEmail);
   const [email, setEmail] = useState("");
   const [licenseKey, setLicenseKey] = useState("");
   const [puk, setPuk] = useState("");
@@ -41,12 +44,30 @@ function AttivazionePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const verified = sessionStorage.getItem("verified_email");
-    if (!verified) {
-      navigate({ to: "/auth" });
-      return;
-    }
-    setEmail(verified);
+    (async () => {
+      const verified = sessionStorage.getItem("verified_email");
+      if (!verified) {
+        navigate({ to: "/auth" });
+        return;
+      }
+      setEmail(verified);
+
+      // Se questa email ha già un'attivazione (utente applicativo noto) o una
+      // licenza attiva su questa app, salta il form e vai direttamente al corso.
+      if (getUserId()) {
+        navigate({ to: "/corso" });
+        return;
+      }
+      try {
+        const lic = await findLicenseFn({ data: { email: verified } });
+        if (lic.found) {
+          navigate({ to: "/corso" });
+        }
+      } catch (err) {
+        console.error("license lookup error", err);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   // Precompila licenza/PUK se arrivati dal link diretto nell'email
