@@ -12,7 +12,7 @@ export type ActivationReason =
   | "server_error";
 
 export type ActivationResult =
-  | { ok: true; licenseId: string; licenseKey: string; puk: string }
+  | { ok: true; licenseId: string; licenseKey: string; puk: string; userId: string }
   | { ok: false; reason: ActivationReason; code: string };
 
 const CODE_MAP: Record<ActivationReason, string> = {
@@ -74,6 +74,19 @@ export const verifyAndActivateLicense = createServerFn({ method: "POST" })
         return fail("email_not_verified");
       }
 
+      // 0-bis. Identita' applicativa: l'app non usa Supabase Auth, quindi
+      // l'utente vive in public.users (unique su email -> upsert idempotente).
+      const { data: userRow, error: userErr } = await supabaseExternal
+        .from("users")
+        .upsert({ email }, { onConflict: "email" })
+        .select("id")
+        .maybeSingle();
+      if (userErr || !userRow?.id) {
+        console.error("users upsert error", userErr);
+        return fail("server_error");
+      }
+      const userId = userRow.id as string;
+
       // 1. Licenza: license_key + APP_CODE + is_active
       const { data: lic, error: licErr } = await supabaseExternal
         .from("licenses")
@@ -124,6 +137,7 @@ export const verifyAndActivateLicense = createServerFn({ method: "POST" })
               licenseId: lic.id,
               licenseKey: lic.license_key ?? licenseKey,
               puk,
+              userId,
             };
           }
           return fail("email_mismatch"); // E-102: PUK già assegnato ad altra email
@@ -135,6 +149,7 @@ export const verifyAndActivateLicense = createServerFn({ method: "POST" })
             licenseId: lic.id,
             licenseKey: lic.license_key ?? licenseKey,
             puk,
+            userId,
           };
         }
         return fail("puk_already_used");
@@ -144,7 +159,7 @@ export const verifyAndActivateLicense = createServerFn({ method: "POST" })
       // a questa email specifica.
       const { data: pukUpd, error: pukUpdErr } = await supabaseExternal
         .from("puk_codes")
-        .update({ used: true, used_at: nowIso, assignee_email: email })
+        .update({ used: true, used_at: nowIso, assignee_email: email, user_id: userId })
         .eq("id", pukRow.id)
         .eq("used", false)
         .select("id");
@@ -178,6 +193,7 @@ export const verifyAndActivateLicense = createServerFn({ method: "POST" })
         licenseId: lic.id,
         licenseKey: lic.license_key ?? licenseKey,
         puk,
+        userId,
       };
     } catch (err) {
       console.error("verifyAndActivateLicense exception", err);
