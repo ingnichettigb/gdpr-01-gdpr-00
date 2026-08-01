@@ -66,15 +66,15 @@ export function VideoLesson({
   const videoRef = useRef<HTMLVideoElement>(null);
   const k = keys(videoId);
 
-  const [completed, setCompleted] = useState(false);
+  const [completed, setCompleted] = useState(serverCompleted);
   const [maxProgress, setMaxProgress] = useState(0);
   const [showSkipWarning, setShowSkipWarning] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setCompleted(localStorage.getItem(k.completed) === "true");
+    setCompleted(serverCompleted || localStorage.getItem(k.completed) === "true");
     setMaxProgress(parseFloat(localStorage.getItem(k.max) ?? "0") || 0);
-  }, [videoId, k.completed, k.max]);
+  }, [videoId, serverCompleted, k.completed, k.max]);
 
   useEffect(() => {
     onCompletedChange?.(completed);
