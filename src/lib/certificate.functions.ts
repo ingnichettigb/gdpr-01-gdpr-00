@@ -142,6 +142,8 @@ const saveSchema = z.object({
   license_id: z.string().min(1),
   license_key: z.string().nullable().optional(),
   puk_code: z.string().nullable().optional(),
+  user_id: z.string().uuid().nullable().optional(),
+  course_id: z.string().uuid().nullable().optional(),
   nome_snapshot: z.string().nullable().optional(),
   cf_snapshot: z.string().nullable().optional(),
   ditta_snapshot: z.string().nullable().optional(),
