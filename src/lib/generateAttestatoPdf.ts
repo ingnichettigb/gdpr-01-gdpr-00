@@ -388,7 +388,7 @@ export async function buildAttestatoPdfBytes(
       certificateNumber: data.certNumber,
       issuedAtIso: issuedDate.toISOString(),
     });
-    const qrSize = 55;
+    const qrSize = 69;
     const quietZone = 2; // margine minimo per la leggibilità della scansione
     const moduleSize = qrSize / (size + quietZone * 2);
 
