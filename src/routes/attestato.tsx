@@ -43,7 +43,7 @@ type QrMatrix = {
 // Dimensione a schermo del QR (px) e margine di rispetto (in "moduli"),
 // stessi rapporti usati nel PDF (qrSize 55pt, quietZone 2 moduli) così il
 // QR appare visivamente coerente tra anteprima e download.
-const QR_DISPLAY_SIZE = 64;
+const QR_DISPLAY_SIZE = 80;
 const QR_QUIET_ZONE = 2;
 
 /**
