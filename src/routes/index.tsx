@@ -155,64 +155,44 @@ function Dashboard() {
           <div className="pt-2">
             <Button asChild size="lg" style={{ backgroundColor: prussian, color: "#fff" }}>
               <Link to="/corso">
-                {c1 || c2 ? "Continua il corso" : "Inizia il corso"}
+                {started ? "Continua il corso" : "Inizia il corso"}
               </Link>
             </Button>
           </div>
         </header>
 
         <section className="grid gap-4 sm:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <PlayCircle className="h-5 w-5 text-primary" />
-                Modulo 1
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Guida Pratica per l'Addetto e l'Incaricato.
-              </p>
-              <div className="flex items-center justify-between">
-                {c1 ? (
-                  <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 dark:bg-green-950/30">
-                    <CheckCircle2 className="h-3 w-3 mr-1" /> Completato
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary">Da iniziare</Badge>
-                )}
-                <span className="text-xs text-muted-foreground">Video</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <PlayCircle className="h-5 w-5 text-primary" />
-                Modulo 2
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Privacy come processo continuo.
-              </p>
-              <div className="flex items-center justify-between">
-                {c2 ? (
-                  <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 dark:bg-green-950/30">
-                    <CheckCircle2 className="h-3 w-3 mr-1" /> Completato
-                  </Badge>
-                ) : c1 ? (
-                  <Badge variant="secondary">Disponibile</Badge>
-                ) : (
-                  <Badge variant="outline" className="opacity-70">
-                    <Lock className="h-3 w-3 mr-1" /> Bloccato
-                  </Badge>
-                )}
-                <span className="text-xs text-muted-foreground">Video</span>
-              </div>
-            </CardContent>
-          </Card>
+          {modules.map((m, i) => {
+            const done = isDone(m.id);
+            const unlocked = i === 0 || isDone(modules[i - 1]!.id);
+            return (
+              <Card key={m.id}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <PlayCircle className="h-5 w-5 text-primary" />
+                    Modulo {i + 1}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p className="text-sm text-muted-foreground">{m.title}</p>
+                  <div className="flex items-center justify-between">
+                    {done ? (
+                      <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 dark:bg-green-950/30">
+                        <CheckCircle2 className="h-3 w-3 mr-1" /> Completato
+                      </Badge>
+                    ) : unlocked ? (
+                      <Badge variant="secondary">Disponibile</Badge>
+                    ) : (
+                      <Badge variant="outline" className="opacity-70">
+                        <Lock className="h-3 w-3 mr-1" /> Bloccato
+                      </Badge>
+                    )}
+                    <span className="text-xs text-muted-foreground">Video</span>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
 
           <Card>
             <CardHeader className="pb-3">
