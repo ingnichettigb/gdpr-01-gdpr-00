@@ -1,5 +1,17 @@
 import { PDFDocument, StandardFonts, rgb, degrees, PageSizes } from "pdf-lib";
-import timbroAsset from "@/assets/timbro_corporate.png.asset.json";
+import { TIMBRO_BASE64 } from "@/assets/timbroBase64";
+
+function base64ToUint8Array(base64: string): Uint8Array {
+  if (typeof atob === "function") {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+  // Ambiente server (Node): atob potrebbe non esistere
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return new Uint8Array((globalThis as any).Buffer.from(base64, "base64"));
+}
 import { buildCertificateQrMatrix } from "@/lib/generateCertificateQr";
 
 export type AttestatoData = {
@@ -160,7 +172,6 @@ export const TOPICS: { title: string; items: string[] }[] = [
 
 export async function buildAttestatoPdfBytes(
   data: AttestatoData,
-  stampUrl: string,
 ): Promise<{ pdfBytes: Uint8Array; slug: string }> {
   const pdfDoc = await PDFDocument.create();
   pdfDoc.setTitle(`Attestato ${data.nome}`);
@@ -358,10 +369,9 @@ export async function buildAttestatoPdfBytes(
   const sigW = fontBold.widthOfTextAtSize(sig, 11);
   const sigX = W - 60 - sigW;
 
-  // Stamp above the signature
+  // Stamp above the signature — incorporato, nessuna richiesta di rete
   try {
-    const stampResp = await fetch(stampUrl);
-    const stampBytes = await stampResp.arrayBuffer();
+    const stampBytes = base64ToUint8Array(TIMBRO_BASE64);
     const stampImg = await pdfDoc.embedPng(stampBytes);
     const stampW = 130;
     const stampH = (stampImg.height / stampImg.width) * stampW;
@@ -373,8 +383,8 @@ export async function buildAttestatoPdfBytes(
       rotate: degrees(-6),
       opacity: 0.9,
     });
-  } catch {
-    // ignore stamp failure
+  } catch (err) {
+    console.error("Timbro: embedding fallito", err);
   }
 
   // QR code di verifica: a metà strada tra il blocco data (sinistra) e il
@@ -554,7 +564,7 @@ export async function buildAttestatoPdfBytes(
  * e forza il download nel browser. Comportamento identico a prima.
  */
 export async function generateAttestatoPdf(data: AttestatoData): Promise<void> {
-  const { pdfBytes, slug } = await buildAttestatoPdfBytes(data, timbroAsset.url);
+  const { pdfBytes, slug } = await buildAttestatoPdfBytes(data);
 
   const blob = new Blob([pdfBytes as BlobPart], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
