@@ -7,6 +7,7 @@ import { generateAttestatoPdf, TOPICS } from "@/lib/generateAttestatoPdf";
 import { buildCertificateQrMatrix } from "@/lib/generateCertificateQr";
 import timbroAsset from "@/assets/timbro_corporate.png.asset.json";
 import { checkCertificateByPuk } from "@/lib/certificate.functions";
+import { APP_CODE } from "@/lib/app-config";
 
 
 
@@ -354,8 +355,11 @@ function AttestatoPage() {
             <p className="mt-1 text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
               My Privacy corso completo — 4 h
             </p>
+            <p className="mt-2 text-xs text-slate-600">
+              Codice corso: {APP_CODE}
+            </p>
             {certNumber && (
-              <p className="mt-2 text-xs font-bold tracking-wider text-slate-800">
+              <p className="mt-1 text-xs font-bold tracking-wider text-slate-800">
                 Certificato n. {certNumber}
               </p>
             )}
@@ -429,7 +433,7 @@ function AttestatoPage() {
             </div>
 
             <div className="mt-3 text-[10px] text-slate-500 text-center leading-tight">
-              Documento generato elettronicamente da Corporate Boost Service —{" "}
+              Documento generato elettronicamente da Corporate Boost Service — codice corso {APP_CODE} —{" "}
               {oggi}
             </div>
           </div>
