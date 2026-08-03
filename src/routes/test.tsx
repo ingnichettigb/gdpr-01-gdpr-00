@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
-import { isLessonCompleted } from "@/components/VideoLesson";
+import { getUserId } from "@/lib/activation";
+import { getCourseModules, getCourseProgress } from "@/lib/course.functions";
 import {
   checkCertificateByPuk,
   saveCertificate,
@@ -71,6 +72,8 @@ const PASS_THRESHOLD = 2;
 
 function TestPage() {
   const navigate = useNavigate();
+  const modulesFn = useServerFn(getCourseModules);
+  const progressFn = useServerFn(getCourseProgress);
   const checkCertFn = useServerFn(checkCertificateByPuk);
   const saveCertFn = useServerFn(saveCertificate);
   const [allowed, setAllowed] = useState<boolean | null>(null);
@@ -79,7 +82,19 @@ function TestPage() {
 
   useEffect(() => {
     (async () => {
-      const ok = isLessonCompleted("lezione1") && isLessonCompleted("lezione2");
+      let ok = false;
+      try {
+        const mods = await modulesFn({});
+        const uid = getUserId();
+        if (uid && mods.modules.length > 0) {
+          const progress = await progressFn({ data: { userId: uid } });
+          ok = mods.modules.every((m) =>
+            progress.completedModuleIds.includes(m.id),
+          );
+        }
+      } catch (err) {
+        console.error("course progress check error", err);
+      }
       // Blocca se questo PUK ha già generato un certificato
       try {
         const raw = sessionStorage.getItem("activation");
@@ -96,6 +111,7 @@ function TestPage() {
       }
       setAllowed(ok);
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   const score = useMemo(

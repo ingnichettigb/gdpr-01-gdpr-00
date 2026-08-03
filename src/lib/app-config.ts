@@ -11,7 +11,7 @@ export const APP_CODE = "01-GDPR-00";
  * Unico punto da estendere se in futuro un'app gestisce più corsi.
  */
 export const COURSE_ID_BY_APP_CODE: Record<string, string | undefined> = {
-  // [APP_CODE]: "<uuid del corso>",
+  [APP_CODE]: "a7622925-dfa6-4a5d-842b-f7a92d666d45",
 };
 
 /** Nome commerciale mostrato agli utenti (email, condizioni d'uso, ecc.) */
