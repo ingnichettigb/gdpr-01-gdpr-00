@@ -148,14 +148,33 @@ function CorsoPage() {
   return (
     <main className="min-h-screen bg-background py-10 px-4">
       <div className="max-w-3xl mx-auto space-y-8">
-        <header>
-          <h1 className="text-3xl font-bold tracking-tight" style={{ color: "#003153" }}>
-            Corso My Privacy
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Segui i moduli in sequenza. Usa il carosello in basso per rivedere quelli
-            già completati.
-          </p>
+        <header className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight" style={{ color: "#003153" }}>
+              Corso My Privacy
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              Segui i moduli in sequenza. Usa il carosello in basso per rivedere quelli
+              già completati.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => {
+              // Il progresso (video completati + punto di riproduzione) è già
+              // salvato in tempo reale, sia in localStorage sia su Supabase
+              // (video_progress) — questo pulsante serve solo a dare
+              // un'uscita esplicita e rassicurante, non a "salvare" qualcosa
+              // che non lo sia già.
+              window.alert(
+                "Il tuo avanzamento è stato salvato. Potrai riprendere da dove hai lasciato tornando su questa pagina, anche da un altro momento.",
+              );
+              window.location.href = "/";
+            }}
+            className="shrink-0"
+          >
+            Esci — Clicca qui per uscire
+          </Button>
         </header>
 
 
