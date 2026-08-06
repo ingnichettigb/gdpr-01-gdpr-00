@@ -346,6 +346,9 @@ function AttestatoPage() {
           <Button asChild variant="outline">
             <Link to="/">Torna alla dashboard</Link>
           </Button>
+          <Button variant="destructive" onClick={handleExit}>
+            Esci — cancella dati da questo browser
+          </Button>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setFlipped((f) => !f)}>
               <RotateCw className="h-4 w-4 mr-2" />
