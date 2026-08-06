@@ -1,3 +1,25 @@
+> **⚠️ QUESTO PIANO È SUPERATO E NON VA IMPLEMENTATO.**
+>
+> Descrive un'architettura (`public.users`, `course_progress`, `course_tests`,
+> `course_modules`, `supabase.auth.getUser()`) mai completata, mai testata, e
+> **causa diretta di 4 incidenti in produzione il 2026-08-06** (video sostituiti
+> da placeholder, accesso al test bloccato, funnel bypassato).
+>
+> L'architettura realmente in uso oggi è documentata in **`ARCHITETTURA.md`**
+> (nella root del repository) — leggere quello prima di qualsiasi modifica a
+> `corso.tsx`, `test.tsx`, `attivazione.tsx`, `index.tsx`, `VideoLesson.tsx`,
+> o a qualsiasi file in `src/lib/`.
+>
+> Il PUK/licenza + `video_progress` (per `puk_code`) è la fonte di verità.
+> `public.users`/`course_progress`/`userId` NON vanno usati.
+>
+> ---
+>
+> Contenuto originale conservato sotto solo per riferimento storico — non è
+> una checklist da completare.
+
+---
+
 ## Contesto verificato
 
 - L'app non usa Supabase Auth: l'identità è OTP su `lead_emails` + licenza/PUK in `sessionStorage`/`localStorage` (`auth.index.tsx`, `auth.verifica.tsx`, `attivazione.tsx`). Quindi `auth.uid()` è sempre `null` e `supabase.auth.getUser()` in `index.tsx` non restituisce mai un utente: oggi la home mostra sempre la landing.
