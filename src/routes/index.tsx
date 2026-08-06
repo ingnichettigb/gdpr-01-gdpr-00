@@ -152,7 +152,7 @@ function Dashboard() {
           <div className="pt-2">
             <Button asChild size="lg" style={{ backgroundColor: prussian, color: "#fff" }}>
               <Link to="/corso">
-                {started ? "Continua il corso" : "Inizia il corso"}
+                Vai al corso
               </Link>
             </Button>
           </div>
