@@ -5,11 +5,9 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
-import { isLessonCompleted } from "@/components/VideoLesson";
-import {
-  checkCertificateByPuk,
-  saveCertificate,
-} from "@/lib/certificate.functions";
+import { currentPuk } from "@/components/VideoLesson";
+import { saveCertificate } from "@/lib/certificate.functions";
+import { getFunnelStatus } from "@/lib/funnel-guard.functions";
 
 export const Route = createFileRoute("/test")({
   head: () => ({
@@ -71,32 +69,39 @@ const PASS_THRESHOLD = 2;
 
 function TestPage() {
   const navigate = useNavigate();
-  const checkCertFn = useServerFn(checkCertificateByPuk);
   const saveCertFn = useServerFn(saveCertificate);
+  const getStatusFn = useServerFn(getFunnelStatus);
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const ok = isLessonCompleted("lezione1") && isLessonCompleted("lezione2");
-      // Blocca se questo PUK ha già generato un certificato
-      try {
-        const raw = sessionStorage.getItem("activation");
-        const act = raw ? JSON.parse(raw) : null;
-        if (act?.puk) {
-          const cert = await checkCertFn({ data: { puk: act.puk } });
-          if (cert) {
-            navigate({ to: "/corso-gia-completato" });
-            return;
-          }
-        }
-      } catch (err) {
-        console.error("cert check error", err);
+      const puk = currentPuk();
+      if (puk === "no-puk") {
+        navigate({ to: "/attivazione" });
+        return;
       }
-      setAllowed(ok);
+      try {
+        const status = await getStatusFn({ data: { puk } });
+        if (!status.valid) {
+          // PUK/licenza non valida o non piu' attiva: niente accesso al test,
+          // qualunque cosa dica localStorage.
+          navigate({ to: "/attivazione" });
+          return;
+        }
+        if (status.certified) {
+          navigate({ to: "/corso-gia-completato" });
+          return;
+        }
+        setAllowed(status.module1 && status.module2);
+      } catch (err) {
+        console.error("getFunnelStatus error", err);
+        // Il server non ha potuto confermare: non si concede l'accesso.
+        setAllowed(false);
+      }
     })();
-  }, [navigate]);
+  }, [navigate, getStatusFn]);
 
   const score = useMemo(
     () => QUESTIONS.reduce((s, q) => (answers[q.id] === q.correct ? s + 1 : s), 0),
