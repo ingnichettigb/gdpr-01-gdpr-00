@@ -227,11 +227,47 @@ export async function findActiveLicense(
 
   if (error || !data) {
     if (error) console.error("findActiveLicense error", error);
-    return { found: false, licenseId: null, licenseKey: null };
+    return { found: false, licenseId: null, licenseKey: null, puk: null };
   }
+
+  // Risolve il PUK realmente assegnato a QUESTA email per questa licenza,
+  // lato server. Senza questo passaggio non e' sicuro mandare l'utente
+  // dritto al corso: significherebbe fidarsi di un PUK trovato altrove
+  // (es. localStorage di un browser condiviso) senza nessun legame con
+  // l'email appena verificata (vedi incidente bypass funnel).
+  let puk: string | null = null;
+  try {
+    const { data: pukRows, error: pukErr } = await supabaseExternal
+      .from("puk_codes")
+      .select("code, assignee_email")
+      .eq("license_id", data.id);
+    if (pukErr) {
+      console.error("findActiveLicense: errore lettura puk_codes", pukErr);
+    } else if (pukRows && pukRows.length > 0) {
+      const byEmail = pukRows.find(
+        (p) =>
+          (p.assignee_email as string | null)?.toLowerCase() ===
+          email.toLowerCase(),
+      );
+      if (byEmail) {
+        puk = byEmail.code as string;
+      } else if (pukRows.length === 1) {
+        // Licenza a posto singolo senza assignee_email valorizzato: l'unico
+        // PUK esistente e' per forza quello del compratore.
+        puk = pukRows[0].code as string;
+      }
+      // Se ci sono piu' PUK e nessuno assegnato a questa email, non
+      // indoviniamo: puk resta null e il chiamante non fara' nessuno
+      // skip automatico.
+    }
+  } catch (err) {
+    console.error("findActiveLicense: eccezione lettura puk_codes", err);
+  }
+
   return {
     found: true,
     licenseId: data.id as string,
     licenseKey: (data.license_key as string | null) ?? null,
+    puk,
   };
 }
