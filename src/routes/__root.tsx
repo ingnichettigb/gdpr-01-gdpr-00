@@ -29,6 +29,7 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "google", content: "notranslate" },
       { title: "Area Formazione — Corporate Boost Service" },
       { name: "description", content: "Dashboard del corso privacy per incaricati. Accedi ai moduli video e al test finale." },
       { name: "author", content: "Lovable" },
@@ -54,7 +55,7 @@ export const Route = createRootRoute({
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="it" translate="no">
       <head>
         <HeadContent />
       </head>
