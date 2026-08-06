@@ -207,6 +207,18 @@ function TestPage() {
                 } catch (err) {
                   console.error("Eccezione durante salvataggio:", err);
                 }
+
+                // Pulizia leggera: l'attestato per questo PUK è generato,
+                // le chiavi di avanzamento video non servono più (il gate
+                // di corso/test ora si basa comunque su getFunnelStatus,
+                // non su queste chiavi). Non tocchiamo attestato_data /
+                // lastActivation / attestato_cert_* / test_passed_*: servono
+                // al recupero attestato multi-browser.
+                for (const lesson of ["lezione1", "lezione2"]) {
+                  localStorage.removeItem(`completed_${currentPukForCert}_${lesson}`);
+                  localStorage.removeItem(`progress_${currentPukForCert}_${lesson}`);
+                  localStorage.removeItem(`max_progress_${currentPukForCert}_${lesson}`);
+                }
               }
             }
             window.scrollTo({ top: 0, behavior: "smooth" });
