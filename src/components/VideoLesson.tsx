@@ -25,7 +25,7 @@ interface VideoLessonProps {
 // dell'app: sessionStorage.activation, popolato da attivazione.tsx). Serve per
 // scopare le chiavi di avanzamento video PER PUK, cosi' due PUK diversi usati
 // nello stesso browser non condividono lo stesso stato di completamento.
-function currentPuk(): string {
+export function currentPuk(): string {
   if (typeof window === "undefined") return "no-puk";
   // 1) sessionStorage: attivazione appena fatta in questa sessione
   try {
