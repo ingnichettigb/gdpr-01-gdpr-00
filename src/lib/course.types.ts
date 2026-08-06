@@ -37,4 +37,5 @@ export type ActiveLicenseResult = {
   found: boolean;
   licenseId: string | null;
   licenseKey: string | null;
+  puk: string | null;
 };
