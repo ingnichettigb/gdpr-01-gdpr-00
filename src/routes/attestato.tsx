@@ -103,6 +103,7 @@ function AttestatoPage() {
   const [certNumber, setCertNumber] = useState<string>("");
   const [issuedAt, setIssuedAt] = useState<string>("");
   const [qrMatrix, setQrMatrix] = useState<QrMatrix | null>(null);
+  const [exitPuk, setExitPuk] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -129,6 +130,7 @@ function AttestatoPage() {
       }
 
       if (pukCorrente) {
+        setExitPuk(pukCorrente);
         const cert = await checkCertFn({ data: { puk: pukCorrente } });
         if (cert) {
           setAllowed(true);
@@ -272,6 +274,70 @@ function AttestatoPage() {
   });
   const cfUpper = data.cf.toUpperCase();
   const dittaUpper = data.ditta;
+
+  function handleExit() {
+    const confirmed = window.confirm(
+      "Il tuo attestato resta comunque disponibile via email e sui nostri server. " +
+        "Uscendo, però, questo browser dimenticherà il tuo PUK: per rivederlo qui dovrai " +
+        "reinserire licenza e PUK dall'inizio. Vuoi continuare?",
+    );
+    if (!confirmed) return;
+
+    // Cancella ogni traccia del PUK da questo browser: sia le chiavi generiche
+    // (attestato_data, lastActivation, ecc.) sia quelle scopate per PUK
+    // (completed_/progress_/max_progress_/attestato_cert_*), sia la sessione
+    // corrente. Il PUK stesso, la licenza e il certificato restano intatti
+    // su Supabase: qui puliamo solo lo stato locale del browser.
+    try {
+      sessionStorage.removeItem("activation");
+      sessionStorage.removeItem("verified_email");
+      sessionStorage.removeItem("accesso_email");
+
+      const puk = exitPuk;
+      const genericKeys = [
+        "attestato_data",
+        "lastActivation",
+        "test_passed",
+        "attestato_cert_number",
+        "attestato_cert_id",
+        "attestato_issued_at",
+      ];
+      genericKeys.forEach((k) => localStorage.removeItem(k));
+
+      if (puk) {
+        const pukScopedPrefixes = [
+          "completed_",
+          "progress_",
+          "max_progress_",
+          "attestato_cert_number_",
+          "attestato_cert_id_",
+          "attestato_issued_at_",
+          "test_passed_",
+        ];
+        for (const lesson of ["lezione1", "lezione2"]) {
+          pukScopedPrefixes.forEach((prefix) => {
+            localStorage.removeItem(`${prefix}${puk}_${lesson}`);
+          });
+        }
+        // Chiavi scopate per PUK ma senza suffisso lezione (es. attestato_cert_number_{puk})
+        localStorage.removeItem(`attestato_cert_number_${puk}`);
+        localStorage.removeItem(`attestato_cert_id_${puk}`);
+        localStorage.removeItem(`attestato_issued_at_${puk}`);
+        localStorage.removeItem(`test_passed_${puk}`);
+      }
+    } catch {
+      // ignore
+    }
+
+    // "Chiudi l'applicazione": un tab aperto dallo script si può chiudere
+    // davvero; per un tab normale il browser blocca window.close(), quindi
+    // in quel caso torniamo alla schermata iniziale, che con i dati appena
+    // cancellati mostrerà la landing page (stato "sloggato"), non la dashboard.
+    window.close();
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 150);
+  }
 
   return (
     <main className="min-h-screen bg-muted/30 py-8 px-4 print:bg-white print:p-0">
