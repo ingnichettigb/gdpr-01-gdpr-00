@@ -84,6 +84,6 @@ export const findActiveLicenseByEmail = createServerFn({ method: "POST" })
       return await findActiveLicense(data.email.trim().toLowerCase());
     } catch (err) {
       console.error("findActiveLicenseByEmail exception", err);
-      return { found: false, licenseId: null, licenseKey: null };
+      return { found: false, licenseId: null, licenseKey: null, puk: null };
     }
   });
