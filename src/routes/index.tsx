@@ -2,8 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { getUserId } from "@/lib/activation";
+import { currentPuk } from "@/components/VideoLesson";
+import { getFunnelStatus } from "@/lib/funnel-guard.functions";
 import {
-  findActiveLicenseByEmail,
   getCourseModules,
   getCourseProgress,
 } from "@/lib/course.functions";
@@ -34,33 +35,29 @@ export const Route = createFileRoute("/")({
 });
 
 function HomePage() {
-  const findLicenseFn = useServerFn(findActiveLicenseByEmail);
+  const getStatusFn = useServerFn(getFunnelStatus);
   const [state, setState] = useState<"loading" | "landing" | "dashboard">("loading");
 
   useEffect(() => {
     (async () => {
-      // L'app non usa Supabase Auth: l'utente è identificato dall'attivazione
-      // (public.users.id salvato in sessionStorage/localStorage).
-      if (getUserId()) {
-        setState("dashboard");
+      // La dashboard si mostra SOLO se esiste un PUK risolvibile e
+      // rivalidato adesso col server (licenza attiva, PUK non scaduto).
+      // Prima si controllava solo un userId residuo in localStorage, senza
+      // nessuna verifica: su un browser condiviso chiunque vedeva la
+      // dashboard (e il corso) di chi aveva usato quel browser prima
+      // (bug di sicurezza corretto qui).
+      const puk = currentPuk();
+      if (puk === "no-puk") {
+        setState("landing");
         return;
       }
-      const verified =
-        typeof window === "undefined"
-          ? null
-          : sessionStorage.getItem("verified_email");
-      if (verified) {
-        try {
-          const lic = await findLicenseFn({ data: { email: verified } });
-          if (lic.found) {
-            setState("dashboard");
-            return;
-          }
-        } catch (err) {
-          console.error("license lookup error", err);
-        }
+      try {
+        const status = await getStatusFn({ data: { puk } });
+        setState(status.valid ? "dashboard" : "landing");
+      } catch (err) {
+        console.error("getFunnelStatus error", err);
+        setState("landing");
       }
-      setState("landing");
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
