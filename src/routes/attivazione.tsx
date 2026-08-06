@@ -9,7 +9,6 @@ import { Loader2, KeyRound } from "lucide-react";
 import { verifyAndActivateLicense, type ActivationReason } from "@/lib/license.functions";
 import { checkCertificateByPuk } from "@/lib/certificate.functions";
 import { findActiveLicenseByEmail } from "@/lib/course.functions";
-import { getUserId } from "@/lib/activation";
 
 export const Route = createFileRoute("/attivazione")({
   head: () => ({ meta: [{ title: "Attivazione licenza — Area Corsi" }] }),
@@ -52,16 +51,33 @@ function AttivazionePage() {
       }
       setEmail(verified);
 
-      // Se questa email ha già un'attivazione (utente applicativo noto) o una
-      // licenza attiva su questa app, salta il form e vai direttamente al corso.
-      if (getUserId()) {
-        navigate({ to: "/corso" });
-        return;
-      }
+      // Scorciatoia per chi torna con la stessa email già verificata: prima
+      // NON verificava nulla (leggeva solo un userId residuo in localStorage,
+      // indipendente dall'email appena inserita — bug di sicurezza corretto
+      // qui). Ora risolve lato server, per QUESTA email, se esiste una
+      // licenza attiva e un PUK realmente assegnato, e solo in quel caso
+      // salta il form.
       try {
         const lic = await findLicenseFn({ data: { email: verified } });
-        if (lic.found) {
-          navigate({ to: "/corso" });
+        if (lic.found && lic.puk && lic.licenseId) {
+          const activationPayload = {
+            licenseId: lic.licenseId,
+            licenseKey: lic.licenseKey ?? "",
+            puk: lic.puk,
+          };
+          try {
+            sessionStorage.setItem("activation", JSON.stringify(activationPayload));
+            localStorage.setItem("lastActivation", JSON.stringify(activationPayload));
+          } catch {
+            // ignore
+          }
+          try {
+            const cert = await checkCertFn({ data: { puk: lic.puk } });
+            navigate({ to: cert ? "/attestato" : "/termini" });
+          } catch (err) {
+            console.error("cert check error", err);
+            navigate({ to: "/termini" });
+          }
         }
       } catch (err) {
         console.error("license lookup error", err);
