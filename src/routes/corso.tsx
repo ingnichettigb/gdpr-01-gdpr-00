@@ -1,8 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { VideoLesson, isLessonCompleted } from "@/components/VideoLesson";
-import { markVideoCompleted, getVideoProgress } from "@/lib/video-progress.functions";
+import { VideoLesson, isLessonCompleted, currentPuk } from "@/components/VideoLesson";
+import { markVideoCompleted } from "@/lib/video-progress.functions";
+import { getFunnelStatus } from "@/lib/funnel-guard.functions";
 import { Button } from "@/components/ui/button";
 import { Lock, CheckCircle2, PlayCircle, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -26,63 +27,53 @@ const LESSON_2 = "lezione2";
 
 type StepKey = "mod1" | "mod2" | "test";
 
-function currentPukForCorso(): string {
-  if (typeof window === "undefined") return "no-puk";
-  try {
-    const raw = sessionStorage.getItem("activation");
-    const act = raw ? JSON.parse(raw) : null;
-    if (act?.puk) return act.puk;
-  } catch {
-    // ignore
-  }
-  try {
-    const raw = localStorage.getItem("attestato_data");
-    const data = raw ? JSON.parse(raw) : null;
-    if (data?.puk) return data.puk;
-  } catch {
-    // ignore
-  }
-  try {
-    const raw = localStorage.getItem("lastActivation");
-    const act = raw ? JSON.parse(raw) : null;
-    if (act?.puk) return act.puk;
-  } catch {
-    // ignore
-  }
-  return "no-puk";
-}
-
 function CorsoPage() {
+  const navigate = useNavigate();
   const [c1, setC1] = useState(false);
   const [c2, setC2] = useState(false);
   const [active, setActive] = useState<StepKey>("mod1");
-  const getProgressFn = useServerFn(getVideoProgress);
+  const getStatusFn = useServerFn(getFunnelStatus);
   const markCompletedFn = useServerFn(markVideoCompleted);
-  const puk = currentPukForCorso();
+  const puk = currentPuk();
 
   useEffect(() => {
     (async () => {
+      if (puk === "no-puk") {
+        navigate({ to: "/attivazione" });
+        return;
+      }
+
       let done1 = isLessonCompleted(LESSON_1);
       let done2 = isLessonCompleted(LESSON_2);
 
-      // Allinea con il server: se un browser diverso segna già completato
-      // un modulo che qui risulta non visto, lo recuperiamo e lo scriviamo
-      // anche in localStorage per coerenza futura.
-      if (puk !== "no-puk") {
-        try {
-          const res = await getProgressFn({ data: { puk } });
-          if (res.completedModules.includes(LESSON_1) && !done1) {
-            localStorage.setItem(`completed_${puk}_${LESSON_1}`, "true");
-            done1 = true;
-          }
-          if (res.completedModules.includes(LESSON_2) && !done2) {
-            localStorage.setItem(`completed_${puk}_${LESSON_2}`, "true");
-            done2 = true;
-          }
-        } catch (err) {
-          console.error("getVideoProgress fallito:", err);
-          // Non bloccante: si prosegue solo con lo stato locale
+      // Rivalida SEMPRE col server: il PUK risolto lato client (anche via
+      // fallback localStorage per il recupero cross-browser) deve essere
+      // un PUK/licenza realmente valida adesso, non solo "un PUK che una
+      // volta ha completato qualcosa su questo browser".
+      try {
+        const status = await getStatusFn({ data: { puk } });
+        if (!status.valid) {
+          navigate({ to: "/attivazione" });
+          return;
         }
+        if (status.certified) {
+          navigate({ to: "/corso-gia-completato" });
+          return;
+        }
+        // Allinea con lo stato reale del server (fonte di verità), scrive
+        // anche in localStorage per coerenza futura/offline-first.
+        if (status.module1 && !done1) {
+          localStorage.setItem(`completed_${puk}_${LESSON_1}`, "true");
+          done1 = true;
+        }
+        if (status.module2 && !done2) {
+          localStorage.setItem(`completed_${puk}_${LESSON_2}`, "true");
+          done2 = true;
+        }
+      } catch (err) {
+        console.error("getFunnelStatus fallito:", err);
+        navigate({ to: "/attivazione" });
+        return;
       }
 
       setC1(done1);
@@ -92,7 +83,7 @@ function CorsoPage() {
       else if (done1 && done2) setActive("test");
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [puk]);
 
   // Avanza automaticamente solo alla TRANSIZIONE da non-completato a completato
   // (non al semplice re-mount di un modulo già superato)
