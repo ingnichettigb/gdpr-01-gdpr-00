@@ -9,60 +9,25 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AccessoRouteImport } from './routes/accesso'
-import { Route as AttestatoRouteImport } from './routes/attestato'
-import { Route as AttivazioneRouteImport } from './routes/attivazione'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as CorsoRouteImport } from './routes/corso'
-import { Route as CorsoGiaCompletatoRouteImport } from './routes/corso-gia-completato'
-import { Route as DatiAttestatoRouteImport } from './routes/dati-attestato'
-import { Route as TerminiRouteImport } from './routes/termini'
 import { Route as TestRouteImport } from './routes/test'
-import { Route as AccessoAttivaRouteImport } from './routes/accesso.attiva'
-import { Route as AccessoSuccessoRouteImport } from './routes/accesso.successo'
-import { Route as AccessoVerificaRouteImport } from './routes/accesso.verifica'
+import { Route as TerminiRouteImport } from './routes/termini'
+import { Route as DatiAttestatoRouteImport } from './routes/dati-attestato'
+import { Route as CorsoGiaCompletatoRouteImport } from './routes/corso-gia-completato'
+import { Route as CorsoRouteImport } from './routes/corso'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AttivazioneRouteImport } from './routes/attivazione'
+import { Route as AttestatoRouteImport } from './routes/attestato'
+import { Route as AccessoRouteImport } from './routes/accesso'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthIndexRouteImport } from './routes/auth.index'
 import { Route as AuthVerificaRouteImport } from './routes/auth.verifica'
+import { Route as AccessoVerificaRouteImport } from './routes/accesso.verifica'
+import { Route as AccessoSuccessoRouteImport } from './routes/accesso.successo'
+import { Route as AccessoAttivaRouteImport } from './routes/accesso.attiva'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AccessoRoute = AccessoRouteImport.update({
-  id: '/accesso',
-  path: '/accesso',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AttestatoRoute = AttestatoRouteImport.update({
-  id: '/attestato',
-  path: '/attestato',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AttivazioneRoute = AttivazioneRouteImport.update({
-  id: '/attivazione',
-  path: '/attivazione',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CorsoRoute = CorsoRouteImport.update({
-  id: '/corso',
-  path: '/corso',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CorsoGiaCompletatoRoute = CorsoGiaCompletatoRouteImport.update({
-  id: '/corso-gia-completato',
-  path: '/corso-gia-completato',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DatiAttestatoRoute = DatiAttestatoRouteImport.update({
-  id: '/dati-attestato',
-  path: '/dati-attestato',
+const TestRoute = TestRouteImport.update({
+  id: '/test',
+  path: '/test',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TerminiRoute = TerminiRouteImport.update({
@@ -70,25 +35,45 @@ const TerminiRoute = TerminiRouteImport.update({
   path: '/termini',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TestRoute = TestRouteImport.update({
-  id: '/test',
-  path: '/test',
+const DatiAttestatoRoute = DatiAttestatoRouteImport.update({
+  id: '/dati-attestato',
+  path: '/dati-attestato',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AccessoAttivaRoute = AccessoAttivaRouteImport.update({
-  id: '/attiva',
-  path: '/attiva',
-  getParentRoute: () => AccessoRoute,
+const CorsoGiaCompletatoRoute = CorsoGiaCompletatoRouteImport.update({
+  id: '/corso-gia-completato',
+  path: '/corso-gia-completato',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AccessoSuccessoRoute = AccessoSuccessoRouteImport.update({
-  id: '/successo',
-  path: '/successo',
-  getParentRoute: () => AccessoRoute,
+const CorsoRoute = CorsoRouteImport.update({
+  id: '/corso',
+  path: '/corso',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AccessoVerificaRoute = AccessoVerificaRouteImport.update({
-  id: '/verifica',
-  path: '/verifica',
-  getParentRoute: () => AccessoRoute,
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AttivazioneRoute = AttivazioneRouteImport.update({
+  id: '/attivazione',
+  path: '/attivazione',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AttestatoRoute = AttestatoRouteImport.update({
+  id: '/attestato',
+  path: '/attestato',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccessoRoute = AccessoRouteImport.update({
+  id: '/accesso',
+  path: '/accesso',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthIndexRoute = AuthIndexRouteImport.update({
   id: '/',
@@ -99,6 +84,21 @@ const AuthVerificaRoute = AuthVerificaRouteImport.update({
   id: '/verifica',
   path: '/verifica',
   getParentRoute: () => AuthRoute,
+} as any)
+const AccessoVerificaRoute = AccessoVerificaRouteImport.update({
+  id: '/verifica',
+  path: '/verifica',
+  getParentRoute: () => AccessoRoute,
+} as any)
+const AccessoSuccessoRoute = AccessoSuccessoRouteImport.update({
+  id: '/successo',
+  path: '/successo',
+  getParentRoute: () => AccessoRoute,
+} as any)
+const AccessoAttivaRoute = AccessoAttivaRouteImport.update({
+  id: '/attiva',
+  path: '/attiva',
+  getParentRoute: () => AccessoRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -220,60 +220,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/accesso': {
-      id: '/accesso'
-      path: '/accesso'
-      fullPath: '/accesso'
-      preLoaderRoute: typeof AccessoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/attestato': {
-      id: '/attestato'
-      path: '/attestato'
-      fullPath: '/attestato'
-      preLoaderRoute: typeof AttestatoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/attivazione': {
-      id: '/attivazione'
-      path: '/attivazione'
-      fullPath: '/attivazione'
-      preLoaderRoute: typeof AttivazioneRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/corso': {
-      id: '/corso'
-      path: '/corso'
-      fullPath: '/corso'
-      preLoaderRoute: typeof CorsoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/corso-gia-completato': {
-      id: '/corso-gia-completato'
-      path: '/corso-gia-completato'
-      fullPath: '/corso-gia-completato'
-      preLoaderRoute: typeof CorsoGiaCompletatoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dati-attestato': {
-      id: '/dati-attestato'
-      path: '/dati-attestato'
-      fullPath: '/dati-attestato'
-      preLoaderRoute: typeof DatiAttestatoRouteImport
+    '/test': {
+      id: '/test'
+      path: '/test'
+      fullPath: '/test'
+      preLoaderRoute: typeof TestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/termini': {
@@ -283,33 +234,61 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TerminiRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/test': {
-      id: '/test'
-      path: '/test'
-      fullPath: '/test'
-      preLoaderRoute: typeof TestRouteImport
+    '/dati-attestato': {
+      id: '/dati-attestato'
+      path: '/dati-attestato'
+      fullPath: '/dati-attestato'
+      preLoaderRoute: typeof DatiAttestatoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/accesso/attiva': {
-      id: '/accesso/attiva'
-      path: '/attiva'
-      fullPath: '/accesso/attiva'
-      preLoaderRoute: typeof AccessoAttivaRouteImport
-      parentRoute: typeof AccessoRoute
+    '/corso-gia-completato': {
+      id: '/corso-gia-completato'
+      path: '/corso-gia-completato'
+      fullPath: '/corso-gia-completato'
+      preLoaderRoute: typeof CorsoGiaCompletatoRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/accesso/successo': {
-      id: '/accesso/successo'
-      path: '/successo'
-      fullPath: '/accesso/successo'
-      preLoaderRoute: typeof AccessoSuccessoRouteImport
-      parentRoute: typeof AccessoRoute
+    '/corso': {
+      id: '/corso'
+      path: '/corso'
+      fullPath: '/corso'
+      preLoaderRoute: typeof CorsoRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/accesso/verifica': {
-      id: '/accesso/verifica'
-      path: '/verifica'
-      fullPath: '/accesso/verifica'
-      preLoaderRoute: typeof AccessoVerificaRouteImport
-      parentRoute: typeof AccessoRoute
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/attivazione': {
+      id: '/attivazione'
+      path: '/attivazione'
+      fullPath: '/attivazione'
+      preLoaderRoute: typeof AttivazioneRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/attestato': {
+      id: '/attestato'
+      path: '/attestato'
+      fullPath: '/attestato'
+      preLoaderRoute: typeof AttestatoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accesso': {
+      id: '/accesso'
+      path: '/accesso'
+      fullPath: '/accesso'
+      preLoaderRoute: typeof AccessoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/auth/': {
       id: '/auth/'
@@ -324,6 +303,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth/verifica'
       preLoaderRoute: typeof AuthVerificaRouteImport
       parentRoute: typeof AuthRoute
+    }
+    '/accesso/verifica': {
+      id: '/accesso/verifica'
+      path: '/verifica'
+      fullPath: '/accesso/verifica'
+      preLoaderRoute: typeof AccessoVerificaRouteImport
+      parentRoute: typeof AccessoRoute
+    }
+    '/accesso/successo': {
+      id: '/accesso/successo'
+      path: '/successo'
+      fullPath: '/accesso/successo'
+      preLoaderRoute: typeof AccessoSuccessoRouteImport
+      parentRoute: typeof AccessoRoute
+    }
+    '/accesso/attiva': {
+      id: '/accesso/attiva'
+      path: '/attiva'
+      fullPath: '/accesso/attiva'
+      preLoaderRoute: typeof AccessoAttivaRouteImport
+      parentRoute: typeof AccessoRoute
     }
   }
 }
