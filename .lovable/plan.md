@@ -155,6 +155,7 @@ rivalidarlo sempre con `getFunnelStatus`, mai nel vietarlo.
 | `src/lib/certificate.functions.ts` | `checkCertificateByPuk`, `saveCertificate` |
 | `src/lib/consent.functions.ts` | `checkTermsConsent`, `recordTermsConsent` |
 | `src/lib/course.server.ts` / `course.functions.ts` | `findActiveLicense`, `findActiveLicenseByEmail` — scorciatoia email→PUK sicura (codice del fix 2026-08-06) |
+| `src/lib/activation.ts` | `getUserId()` — sola lettura di cache locale per la dashboard; **mai** usarla da sola come gate di sicurezza (causa del bug di identity-crossover corretto il 2026-08-06) |
 | `src/components/VideoLesson.tsx` | player video, `currentPuk()`, `isLessonCompleted()` |
 | `src/routes/index.tsx`, `attivazione.tsx`, `corso.tsx`, `test.tsx`, `attestato.tsx` | pagine del funnel (§4) |
 | `src/routes/__root.tsx` | head/meta globali, `notranslate` |
