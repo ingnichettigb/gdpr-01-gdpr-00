@@ -1,81 +1,186 @@
-> **⚠️ QUESTO PIANO È SUPERATO E NON VA IMPLEMENTATO.**
->
-> Descrive un'architettura (`public.users`, `course_progress`, `course_tests`,
-> `course_modules`, `supabase.auth.getUser()`) mai completata, mai testata, e
-> **causa diretta di 4 incidenti in produzione il 2026-08-06** (video sostituiti
-> da placeholder, accesso al test bloccato, funnel bypassato).
->
-> L'architettura realmente in uso oggi è documentata in **`ARCHITETTURA.md`**
-> (nella root del repository) — leggere quello prima di qualsiasi modifica a
-> `corso.tsx`, `test.tsx`, `attivazione.tsx`, `index.tsx`, `VideoLesson.tsx`,
-> o a qualsiasi file in `src/lib/`.
->
-> Il PUK/licenza + `video_progress` (per `puk_code`) è la fonte di verità.
-> `public.users`/`course_progress`/`userId` NON vanno usati.
->
-> ---
->
-> Contenuto originale conservato sotto solo per riferimento storico — non è
-> una checklist da completare.
+# Piano tecnico — 01-GDPR-00 "Corso My Privacy"
+
+Riferimento unico: `ARCHITETTURA.md` (root del repo, aggiornato 2026-08-06).
+Checkpoint stabile: tag Git `checkpoint-20260806-funnel-security-fix`.
+Dominio: `01-gdpr-00.corporateboostservice.eu`.
+
+Questo documento descrive l'architettura in uso e le regole da rispettare in
+ogni intervento futuro. Non è una checklist di lavori da eseguire: le attività
+aperte sono elencate solo nella sezione finale.
 
 ---
 
-## Contesto verificato
+## 1. Contesto
 
-- L'app non usa Supabase Auth: l'identità è OTP su `lead_emails` + licenza/PUK in `sessionStorage`/`localStorage` (`auth.index.tsx`, `auth.verifica.tsx`, `attivazione.tsx`). Quindi `auth.uid()` è sempre `null` e `supabase.auth.getUser()` in `index.tsx` non restituisce mai un utente: oggi la home mostra sempre la landing.
-- Tutti i dati (licenses, puk_codes, lead_emails, certificates) stanno nel **database esterno**, raggiunto solo da server functions con service role (`client.external.ts`). Il frontend non può interrogarlo direttamente con l'anon key.
-- Il tracking video è oggi in `localStorage` con chiavi per PUK (`VideoLesson.tsx`), le lezioni sono costanti (`corso.tsx`), e in `test.tsx` il certificato viene salvato senza `user_id`/`course_id`.
-- `accesso.attiva.tsx` è solo un redirect verso `/attivazione`: il form reale è in `attivazione.tsx`.
+App di e-learning GDPR, gemella di `02-GDPR-00` ("Corso Privacy Addetto").
+Parte del portfolio CorporateBoostService, che condivide un unico progetto
+Supabase esterno fra 14+ prodotti, distinti tramite `app_code`.
 
-Conseguenza architetturale: **ogni lettura/scrittura sulle tabelle corso passa da nuove server functions** (`src/lib/course.functions.ts`), non da query client-side.
+Stack: React + TanStack Start/Router (Lovable) · Supabase esterno (accesso solo
+via server function con service role) · Resend (email) · Cloudflare (DNS/CDN) ·
+GitHub.
 
-## Prerequisiti sul DB esterno (SQL da eseguire nel progetto Supabase esterno)
+Contenuti: ancora embrionali (video segnaposto, test da riscrivere).
+L'architettura tecnica è invece considerata stabile e va duplicata identica su
+`02-GDPR-00`.
 
-Fornisco il file `docs/migration_users_courses.sql` (stesso pattern dei file già presenti in `docs/`), da eseguire manualmente:
+---
 
-- `create table if not exists public.users (id uuid primary key default gen_random_uuid(), email text unique not null, created_at timestamptz default now())`
-- `alter table public.puk_codes add column if not exists user_id uuid`
-- `alter table public.courses add column if not exists app_code text` + `update courses set app_code = '01-GDPR-00'` sulla riga del corso
-- grant/RLS non necessari: l'accesso avviene solo via service role.
+## 2. Identità: OTP + PUK, non un login
 
-Se preferisci non toccare `courses`, la mappatura può restare in codice (`COURSE_ID_BY_APP_CODE`), ma serve l'UUID del corso.
+L'app non ha autenticazione utente. L'identità si compone di due passaggi:
 
-## Implementazione
+1. **OTP via email** su `lead_emails` → `sessionStorage.verified_email`
+2. **Licenza + PUK** → `sessionStorage.activation` e `localStorage.lastActivation`
 
-**1. Identità utente (`src/lib/license.functions.ts`)**
-- Dopo la verifica email (punto 0) e prima delle query su `puk_codes`: upsert su `users` con `{ email }`, `onConflict: "email"`, `select("id")` → `userId`.
-- Aggiungere `userId` a tutti e 3 i `return { ok: true, ... }` e al tipo `ActivationResult`.
-- Nell'update del PUK libero (punto 6) scrivere anche `user_id: userId`.
+Il **PUK è l'identificatore del corsista**: consenso, progresso video e
+certificato sono tutti scopati per PUK.
 
-**2. Persistenza attivazione (`src/routes/attivazione.tsx`)**
-- Includere `userId` in `activationPayload` salvato in `sessionStorage.activation` e `localStorage.lastActivation`.
+### Chiavi browser (tutte solo cache di esperienza utente)
 
-**3. Guard d'ingresso (`src/routes/index.tsx`)**
-- Rimuovere il check `supabase.auth.getUser()` (inefficace).
-- Se `localStorage.lastActivation` contiene un `userId` valido: reidratare `sessionStorage.activation` e reindirizzare subito a `/corso`, saltando `/auth` e `/attivazione`.
-- In parallelo, una server function `findActiveLicenseByEmail` verifica su `licenses` (`user_email` = email verificata, `is_active = true`, `app_code`) per il caso in cui esista solo `verified_email` in sessione: se trovata, redirect a `/corso`.
-- Altrimenti landing come oggi.
+| Chiave | Storage | Scopo | Scritta da |
+|---|---|---|---|
+| `verified_email` | session | email confermata via OTP | `auth.verifica.tsx` |
+| `activation` | session | `{licenseId, licenseKey, puk}` sessione corrente | `attivazione.tsx` |
+| `lastActivation` | local | stessa struttura, persistente (recupero cross-browser) | `attivazione.tsx` |
+| `attestato_data` | local | anagrafica + puk, per rigenerare l'attestato | `dati-attestato.tsx` |
+| `completed_{PUK}_{lezione}` | local | flag locale "video visto" | `VideoLesson.tsx` |
+| `progress_{PUK}_{lezione}`, `max_progress_{PUK}_{lezione}` | local | ripresa video, anti-skip | `VideoLesson.tsx` |
+| `attestato_cert_number_{PUK}`, `_cert_id_`, `_issued_at_` | local | cache certificato emesso | `test.tsx` |
+| `test_passed_{PUK}` | local | flag locale test superato | `test.tsx` |
 
-**4. Nuovo `src/lib/course.functions.ts` (server functions, `supabaseExternal`)**
-- `getCourseByAppCode()` — risolve il `course_id` **solo** da `APP_CODE` (`@/lib/app-config`); unico punto di mappatura app→corso.
-- `getCourseModules()` — `course_modules` filtrata per `course_id`, ordinata `order_index`; ritorna DTO `{ id, title, youtube_url, order_index, duration_seconds }`.
-- `getCourseProgress({ userId })` — righe `course_progress` per i module_id del corso; ritorna `{ moduleId, status }[]` + `course_completed`.
-- `markModuleCompleted({ userId, moduleId })` — upsert `course_progress` con `status: 'completed'`, `completed_at: now()`; poi conta i moduli completati e, se tutti, imposta `course_completed = true` e `course_completed_at = now()`; ritorna `{ allCompleted }`.
-- `saveTestResult({ userId, score, passed })` — insert in `course_tests` con `course_id`, `taken_at: now()`.
+**Regola invariante**: nessuna di queste chiavi, da sola, concede accesso a
+corso, test o dashboard. Il gate è sempre una rivalidazione server-side.
 
-**5. Player e carosello (`src/routes/corso.tsx`, `src/components/VideoLesson.tsx`)**
-- Sostituire `LESSON_1`/`LESSON_2` con i moduli caricati da `getCourseModules` (loader + TanStack Query); step del carosello generati dinamicamente, con sbloccaggio sequenziale per `order_index`.
-- Stato completato letto da `getCourseProgress` invece di `localStorage`; `localStorage` resta solo per la posizione di ripresa e l'anti-skip.
-- `VideoLesson`: `handleEnded` chiama `markModuleCompleted` (oltre al salvataggio locale) e invalida la query di progresso; nuova prop `moduleId`.
-- Nuovo pulsante **"Esci"** sempre visibile nell'area player, che porta a `/` (dashboard/lista corsi).
+---
 
-**6. Test finale (`src/routes/test.tsx`)**
-- Gate d'accesso basato su `course_progress` (tutti i moduli completati) invece di `isLessonCompleted`.
-- Al superamento: `saveTestResult(...)` in aggiunta alle scritture in `localStorage`.
-- Passare `userId` e `courseId` a `saveCertificate`; in `certificate.functions.ts` estendere lo schema Zod e l'`insert` con `user_id` e `course_id` (oggi sempre NULL).
+## 3. Modello dati (fonte di verità, Supabase esterno)
 
-## Note tecniche
+Pattern multi-seat: **1 licenza → N PUK**.
 
-- Tutte le nuove server functions usano `await import("@/integrations/supabase/client.external")` dentro l'handler, con validazione Zod e ritorno di DTO serializzabili — nessuna eccezione propagata al client.
-- `course_modules.youtube_url`: se i moduli attuali usano URL di file video, il player `<video>` resta valido; per URL YouTube reali servirà un iframe embed (con perdita del controllo anti-skip). Segnalo il punto e mantengo `<video>` fino a conferma.
-- Nessun `auth.uid()`: l'`user_id` scritto è sempre l'`id` di `public.users`.
+- **`licenses`** — `id`, `license_key`, `user_email` (ACQUIRENTE), `is_active`,
+  `expires_at`, `app_code`
+- **`puk_codes`** — `id`, `code`, `license_id` (FK), `assignee_email`
+  (PARTECIPANTE del singolo posto, può differire dall'acquirente), `expires_at`,
+  `used`, `used_at`
+- **`license_consents`** — consenso condizioni d'uso **per PUK**: `puk_code`,
+  `license_id`, `app_code`, `language`, `terms_version`
+- **`video_progress`** — PK `(puk_code, module_key)`, colonna `completed`:
+  **unica fonte di verità del progresso video**
+- **`certificates`** — `puk_code`, `certificate_number`: un certificato per PUK
+
+`app_code` è il codice nudo (`01-GDPR-00`); il campo `code` di
+`product_catalog` include il suffisso di validità (`01-GDPR-00-03`).
+
+---
+
+## 4. Funnel
+
+```text
+/auth                 → inserimento email
+/auth/verifica        → OTP → sessionStorage.verified_email
+/attivazione          → form licenza+PUK, o scorciatoia sicura per email nota
+/termini              → consenso condizioni d'uso (per PUK, 4 lingue)
+/dati-attestato       → anagrafica (nome, CF, ditta)
+/corso                → 2 video sequenziali (Modulo 1 / Modulo 2)
+/test                 → 3 domande, soglia 2/3
+/attestato            → PDF + QR + email via Resend
+/corso-gia-completato → PUK con certificato già emesso
+/                     → landing (nessun PUK valido) o dashboard (PUK valido)
+```
+
+Un file per pagina in `src/routes/<nome>.tsx`; i punti nel nome indicano nesting.
+
+---
+
+## 5. Gate unico server-side: `getFunnelStatus`
+
+File: `src/lib/funnel-guard.functions.ts`.
+
+```ts
+getFunnelStatus({ puk }) → {
+  valid: boolean;        // PUK esiste e non scaduto; licenza attiva e non scaduta
+  reason: string | null; // es. "puk_non_trovato", "licenza_scaduta"
+  module1: boolean;      // da video_progress
+  module2: boolean;
+  certified: boolean;    // certificato già esistente per il PUK
+}
+```
+
+Chiamata a **ogni mount** di `corso.tsx`, `test.tsx`, `index.tsx`.
+Comportamento standard:
+
+- `puk === "no-puk"` → redirect `/attivazione`
+- `!valid` → redirect `/attivazione`
+- `certified` (fuori da `/attestato`) → redirect `/corso-gia-completato`
+- altrimenti `module1`/`module2` decidono cosa è sbloccato
+
+`currentPuk()` (esportata da `src/components/VideoLesson.tsx`) risolve il PUK
+candidato con fallback a 3 livelli: `sessionStorage.activation` →
+`localStorage.attestato_data` → `localStorage.lastActivation`. Il fallback è
+voluto (recupero attestato da un altro browser); la sicurezza sta nel
+rivalidarlo sempre con `getFunnelStatus`, mai nel vietarlo.
+
+---
+
+## 6. Regole da rispettare in ogni intervento futuro
+
+1. Ogni pagina protetta rivalida il PUK con `getFunnelStatus` al mount; nessun
+   gate basato su `localStorage`/`sessionStorage`.
+2. Il progresso video si legge e si scrive solo tramite
+   `src/lib/video-progress.functions.ts` (tabella `video_progress`, per PUK).
+3. Le scorciatoie "email già nota" risolvono il PUK **lato server** con
+   `findActiveLicenseByEmail` e impostano `activation`/`lastActivation` prima di
+   avanzare nel funnel. Mai saltare passaggi senza aver impostato un PUK.
+4. Le server function toccano Supabase solo via
+   `await import("@/integrations/supabase/client.external")` (`supabaseExternal`),
+   mai il client Lovable Cloud di default.
+5. Il corso è solo in italiano: mantenere `lang="it"`, `translate="no"` e
+   `<meta name="google" content="notranslate">` in `src/routes/__root.tsx`
+   (la traduzione automatica del browser rompe il DOM gestito da React).
+6. Dopo l'emissione del certificato si ripuliscono le chiavi
+   `completed_*`/`progress_*`/`max_progress_*` del PUK, ma **non**
+   `attestato_data`/`lastActivation` (servono al recupero attestato).
+7. Un commit su GitHub non aggiorna il sito: serve sempre **Publish** da Lovable.
+
+---
+
+## 7. File di riferimento
+
+| File | Ruolo |
+|---|---|
+| `src/lib/funnel-guard.functions.ts` | `getFunnelStatus` — gate server unico |
+| `src/lib/video-progress.functions.ts` | `markVideoCompleted`, `getVideoProgress` |
+| `src/lib/license.functions.ts` | `verifyAndActivateLicense` |
+| `src/lib/certificate.functions.ts` | `checkCertificateByPuk`, `saveCertificate` |
+| `src/lib/consent.functions.ts` | `checkTermsConsent`, `recordTermsConsent` |
+| `src/lib/course.server.ts` / `course.functions.ts` | `findActiveLicense`, `findActiveLicenseByEmail` — scorciatoia email→PUK sicura (codice del fix 2026-08-06) |
+| `src/components/VideoLesson.tsx` | player video, `currentPuk()`, `isLessonCompleted()` |
+| `src/routes/index.tsx`, `attivazione.tsx`, `corso.tsx`, `test.tsx`, `attestato.tsx` | pagine del funnel (§4) |
+| `src/routes/__root.tsx` | head/meta globali, `notranslate` |
+
+### Costanti
+
+- `APP_CODE = "01-GDPR-00"` (`src/lib/app-config.ts`) — da cambiare in
+  `"02-GDPR-00"` sul repo gemello, insieme a nome corso, dominio e titoli `<head>`
+- `LESSON_1 = "lezione1"`, `LESSON_2 = "lezione2"` — moduli fissi
+- `TERMS_VERSION` — incrementarla forza una nuova accettazione per tutti i PUK
+
+---
+
+## 8. Attività aperte
+
+1. Duplicare questa architettura su `02-GDPR-00`, sostituendo
+   `app_code`/nome corso/dominio — **senza toccare** `attestato.tsx` né i
+   template email di quell'app.
+2. Sostituire i video segnaposto con i video reali.
+3. Riscrivere le domande del test (entrambe le app).
+4. Estendere il pattern PUK-sicuro (`getFunnelStatus`) alle altre app del
+   portfolio: `001SmMntnnc`, `002MnFAT`, `011PedFlow`.
+5. Eventuale pulizia di codice non più usato: da valutare **riga per riga e con
+   conferma esplicita**, mai per file intero. In particolare
+   `src/lib/course.server.ts` e `src/lib/course.functions.ts` contengono
+   `findActiveLicense`/`findActiveLicenseByEmail`, che sono parte del fix di
+   sicurezza del 2026-08-06 e non vanno rimosse.
+6. Decidere se rimuovere dal DB condiviso le tabelle create ma non utilizzate da
+   questa app.
