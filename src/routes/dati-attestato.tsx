@@ -121,13 +121,19 @@ function DatiAttestatoPage() {
 
       setForm((f) => ({ ...f, licenseKey: act!.licenseKey, licenseId: act!.licenseId, puk: act!.puk }));
 
-      // Prefill dai dati esistenti se già presenti in questo browser
+      // Prefill dai dati esistenti se già presenti in questo browser — ma
+      // SOLO se sono davvero di questo PUK. attestato_data non è scopato
+      // per PUK: su un computer già usato da un'altra persona per un altro
+      // corso, questi dati sarebbero i SUOI, non quelli dell'attivazione
+      // corrente. Senza questo controllo, cambiando dispositivo il form si
+      // pre-compilava con l'anagrafica di chi aveva usato quel browser
+      // prima, non con la propria.
       const saved = localStorage.getItem(STORAGE_KEY);
       let hadLocalData = false;
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          if (parsed && typeof parsed === "object") {
+          if (parsed && typeof parsed === "object" && parsed.puk === act!.puk) {
             hadLocalData = true;
             setForm({
               nome: parsed.nome ?? "",
