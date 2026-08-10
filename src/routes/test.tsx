@@ -8,6 +8,7 @@ import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { currentPuk } from "@/components/VideoLesson";
 import { saveCertificate } from "@/lib/certificate.functions";
 import { getFunnelStatus } from "@/lib/funnel-guard.functions";
+import { getParticipantData } from "@/lib/participant-data.functions";
 
 export const Route = createFileRoute("/test")({
   head: () => ({
@@ -71,6 +72,7 @@ function TestPage() {
   const navigate = useNavigate();
   const saveCertFn = useServerFn(saveCertificate);
   const getStatusFn = useServerFn(getFunnelStatus);
+  const getParticipantFn = useServerFn(getParticipantData);
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -146,20 +148,20 @@ function TestPage() {
               0,
             );
             if (finalScore >= PASS_THRESHOLD) {
-              // Legge subito il PUK corrente per scopare TUTTE le chiavi
-              // localStorage collegate a questo test. Senza questo, cambiando
-              // PUK nello stesso browser si rischia di riusare un numero
-              // certificato gia' assegnato a un'altra persona (violazione
-              // UNIQUE su Supabase, salvataggio silenziosamente fallito).
-              const rawData = localStorage.getItem("attestato_data");
-              const parsedData = rawData ? JSON.parse(rawData) : null;
-              const currentPukForCert: string = parsedData?.puk ?? "no-puk";
+              // Il PUK di riferimento è SEMPRE quello della sessione reale
+              // (currentPuk, già rivalidato dal gate all'inizio di questa
+              // pagina), mai quello letto da attestato_data: su un browser
+              // già usato da un'altra persona, attestato_data potrebbe
+              // appartenere a un PUK diverso — usarlo per decidere "di chi è
+              // il certificato" avrebbe potuto salvarlo sulla persona
+              // sbagliata, con il nome sbagliato.
+              const currentPukForCert: string = currentPuk();
               const certKey = `attestato_cert_number_${currentPukForCert}`;
 
               localStorage.setItem("test_passed", "true");
               localStorage.setItem(`test_passed_${currentPukForCert}`, "true");
 
-              if (!localStorage.getItem(certKey)) {
+              if (!localStorage.getItem(certKey) && currentPukForCert !== "no-puk") {
                 const d = new Date();
                 const pad = (n: number) => String(n).padStart(2, "0");
                 const pukSuffix = currentPukForCert
@@ -171,14 +173,51 @@ function TestPage() {
 
                 // Persist certificate to Supabase (immutable record)
                 try {
-                  const a = parsedData;
+                  const rawData = localStorage.getItem("attestato_data");
+                  const parsedData = rawData ? JSON.parse(rawData) : null;
+                  let a: {
+                    licenseId?: string;
+                    licenseKey?: string;
+                    puk?: string;
+                    nome?: string;
+                    cf?: string;
+                    ditta?: string;
+                    luogo?: string;
+                    dataNascita?: string;
+                  } | null = parsedData?.puk === currentPukForCert ? parsedData : null;
+
+                  if (!a) {
+                    // attestato_data assente o di un altro PUK: licenseId/
+                    // licenseKey vengono dalla sessione (fonte affidabile),
+                    // i dati anagrafici dal server (participant_data), MAI
+                    // da localStorage se non è già stato verificato che
+                    // appartiene a questo PUK.
+                    let identity: { licenseId?: string; licenseKey?: string; puk?: string } | null = null;
+                    try {
+                      const raw =
+                        sessionStorage.getItem("activation") ?? localStorage.getItem("lastActivation");
+                      const parsed = raw ? JSON.parse(raw) : null;
+                      if (parsed?.puk === currentPukForCert) identity = parsed;
+                    } catch {
+                      // ignore
+                    }
+                    if (identity) {
+                      try {
+                        const remote = await getParticipantFn({ data: { puk: currentPukForCert } });
+                        if (remote) a = { ...identity, ...remote };
+                      } catch (err) {
+                        console.error("getParticipantData fallito:", err);
+                      }
+                    }
+                  }
+
                   if (a && a.licenseId) {
                     const res = await saveCertFn({
                       data: {
                         certificate_number: cert,
                         license_id: a.licenseId,
                         license_key: a.licenseKey ?? null,
-                        puk_code: a.puk ?? null,
+                        puk_code: currentPukForCert,
                         nome_snapshot: a.nome ?? null,
                         cf_snapshot: (a.cf ?? "").toUpperCase() || null,
                         ditta_snapshot: a.ditta ?? null,
@@ -203,6 +242,10 @@ function TestPage() {
                       localStorage.setItem("attestato_cert_id", res.id);
                       localStorage.setItem("attestato_issued_at", res.issued_at);
                     }
+                  } else {
+                    console.error(
+                      "Impossibile determinare i dati anagrafici/licenza per il PUK corrente: certificato NON generato",
+                    );
                   }
                 } catch (err) {
                   console.error("Eccezione durante salvataggio:", err);
