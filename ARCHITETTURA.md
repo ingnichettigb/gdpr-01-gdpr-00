@@ -78,6 +78,14 @@ Pattern condiviso con le altre app del portfolio: **1 licenza → N PUK**.
   `completed` — fonte di verità server-side del progresso video, **indipendente**
   da `course_progress`/`public.users` (che non vanno usate, vedi §7)
 - **`certificates`**: `puk_code`, `certificate_number` — un certificato per PUK
+- **`participant_data`** *(dal 2026-08-08)*: `puk_code` (PK, FK → `puk_codes.code`),
+  `nome`, `cf`, `ditta`, `luogo_nascita`, `data_nascita` — anagrafica del
+  partecipante salvata **prima** della generazione del certificato (che la
+  duplica come snapshot in `certificates` solo a corso completato). Permette
+  il recupero cross-browser dei dati anche a metà percorso, senza dover
+  ripassare da `/dati-attestato`. Vedi `docs/migration_participant_data.sql`
+  e `src/lib/participant-data.functions.ts`
+  (`getParticipantData`/`saveParticipantData`).
 
 `app_code` è sempre il codice nudo (`01-GDPR-00`); il campo `code` di
 `product_catalog` include il suffisso di validità (`01-GDPR-00-03`) — non
@@ -222,6 +230,7 @@ su 4 del 2026-08-06.
 | `src/lib/license.functions.ts` | `verifyAndActivateLicense` (attivazione PUK) |
 | `src/lib/certificate.functions.ts` | `checkCertificateByPuk`, `saveCertificate` |
 | `src/lib/consent.functions.ts` | `checkTermsConsent`, `recordTermsConsent` |
+| `src/lib/participant-data.functions.ts` | `getParticipantData`/`saveParticipantData` — anagrafica per PUK, pre-certificato (dal 2026-08-08) |
 | `src/lib/course.server.ts` / `course.functions.ts` / `course.types.ts` | `findActiveLicense`/`findActiveLicenseByEmail` (scorciatoia email→PUK sicura) |
 | `src/lib/activation.ts` | `getUserId()` — solo lettura cache locale, **mai** usata da sola come gate di sicurezza |
 | `src/components/VideoLesson.tsx` | player video, `currentPuk()` (esportata), `isLessonCompleted()` |
@@ -249,14 +258,17 @@ su 4 del 2026-08-06.
   verificare un commit appena fatto usare `api.github.com/repos/.../contents/...`
   (base64), non l'URL raw.
 
-## 10. TODO aperti (stato 2026-08-06)
+## 10. TODO aperti (stato 2026-08-08)
 
-1. Duplicare questa architettura su `02-GDPR-00`, sostituendo `app_code`/nome
-   corso/dominio — **senza toccare** `attestato.tsx` né i template email di
-   quell'app (già funzionanti e differenziati correttamente)
+1. ~~Duplicare questa architettura su `02-GDPR-00`~~ — **fatto il 2026-08-07**
+   (checkpoint `checkpoint-20260807-funnel-security-fix` su quel repo),
+   inclusa la correzione di un bug critico specifico di 02 (test sempre
+   bloccato, gate su `course_progress`/`userId` mai popolata)
 2. Video reali (oggi placeholder `w3schools.com` su entrambe le app)
 3. Riscrittura domande test per entrambe le app
 4. Decidere se ripulire/rimuovere le tabelle del sistema abbandonato (§7) o
    lasciarle inutilizzate
 5. Estendere `getFunnelStatus`/pattern PUK-sicuro alle altre app del
    portfolio (`001SmMntnnc`, `002MnFAT`, `011PedFlow`)
+6. ~~Migrazione `participant_data`~~ — **eseguita il 2026-08-08** sul DB
+   condiviso (vedi §3, `docs/migration_participant_data.sql`)
