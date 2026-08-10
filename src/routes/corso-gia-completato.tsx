@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
 
@@ -48,6 +48,9 @@ function CorsoGiaCompletatoPage() {
           Se desideri erogare il corso a un'altra persona, puoi acquistare
           una nuova licenza (con nuovo codice PUK) al link seguente:
         </p>
+        <Button asChild size="lg" variant="outline">
+          <Link to="/attestato">Vedi il tuo attestato</Link>
+        </Button>
         <Button asChild size="lg">
           <a
             href="https://corporateboostservice.eu/corso-gdpr-incaricati"
