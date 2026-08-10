@@ -199,6 +199,21 @@ italiano → aggiunto `<meta name="google" content="notranslate">` e
 `translate="no"` su `<html>` in `src/routes/__root.tsx` (anche `lang`
 corretto da `"en"` a `"it"`).
 
+### 6.6 Vicolo cieco della scorciatoia email (2026-08-08)
+`findActiveLicenseByEmail` (in `attivazione.tsx`) prende **la prima**
+licenza attiva trovata per quell'email (`.limit(1)`, nessun ordinamento). Se
+quell'email ha già una licenza certificata, l'utente viene mandato dritto su
+`/attestato` o `/corso-gia-completato` — **senza nessun modo di inserire una
+licenza/PUK diversa**, anche se genuinamente ne ha una nuova da attivare con
+la stessa email. Non è un problema di sicurezza, è un vicolo cieco
+funzionale.
+**Fix**: aggiunto un link "Hai un'altra licenza da attivare? Inserisci qui"
+su `corso-gia-completato.tsx` e `attestato.tsx`. Al click, pulisce
+`sessionStorage.activation` e imposta `sessionStorage.skip_auto_activation
+= "1"`, poi naviga a `/attivazione`. `attivazione.tsx` controlla questo
+flag a inizio effetto: se presente, lo consuma e **salta** la scorciatoia
+email, mostrando direttamente il form manuale licenza+PUK.
+
 ---
 
 ## 7. Sistema ABBANDONATO — da non implementare
