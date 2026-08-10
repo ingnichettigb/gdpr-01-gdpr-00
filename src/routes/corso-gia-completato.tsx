@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
 
@@ -17,6 +17,24 @@ export const Route = createFileRoute("/corso-gia-completato")({
 });
 
 function CorsoGiaCompletatoPage() {
+  const navigate = useNavigate();
+
+  function handleOtherLicense() {
+    // La scorciatoia "email già nota" in /attivazione trova SOLO la prima
+    // licenza attiva per questa email e, se già certificata, ti riporta
+    // sempre qui — senza via d'uscita se in realtà vuoi attivarne un'altra
+    // con la stessa email (es. corso da rifare, seconda licenza). Questo
+    // flag fa saltare la scorciatoia UNA volta sola, mostrando il form
+    // manuale licenza+PUK.
+    try {
+      sessionStorage.removeItem("activation");
+      sessionStorage.setItem("skip_auto_activation", "1");
+    } catch {
+      // ignore
+    }
+    navigate({ to: "/attivazione" });
+  }
+
   return (
     <main className="min-h-screen bg-background flex items-center justify-center px-4 py-10">
       <div className="max-w-lg text-center space-y-5 rounded-xl border bg-card p-8">
@@ -39,6 +57,13 @@ function CorsoGiaCompletatoPage() {
             Acquista un nuovo corso
           </a>
         </Button>
+        <button
+          type="button"
+          onClick={handleOtherLicense}
+          className="block mx-auto text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
+        >
+          Hai un'altra licenza da attivare? Inserisci qui
+        </button>
       </div>
     </main>
   );
