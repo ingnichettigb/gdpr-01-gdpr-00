@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Award, AlertTriangle, Loader2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { checkTermsConsent } from "@/lib/consent.functions";
+import { getParticipantData, saveParticipantData } from "@/lib/participant-data.functions";
 
 export const Route = createFileRoute("/dati-attestato")({
   head: () => ({
@@ -65,6 +66,8 @@ type Data = {
 function DatiAttestatoPage() {
   const navigate = useNavigate();
   const checkTermsFn = useServerFn(checkTermsConsent);
+  const getParticipantFn = useServerFn(getParticipantData);
+  const saveParticipantFn = useServerFn(saveParticipantData);
   const [ready, setReady] = useState(false);
   const [cfTouched, setCfTouched] = useState(false);
   const [activation, setActivation] = useState<{ licenseId: string; licenseKey: string; puk: string } | null>(null);
@@ -118,12 +121,14 @@ function DatiAttestatoPage() {
 
       setForm((f) => ({ ...f, licenseKey: act!.licenseKey, licenseId: act!.licenseId, puk: act!.puk }));
 
-      // Prefill dai dati esistenti se già presenti
+      // Prefill dai dati esistenti se già presenti in questo browser
       const saved = localStorage.getItem(STORAGE_KEY);
+      let hadLocalData = false;
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
           if (parsed && typeof parsed === "object") {
+            hadLocalData = true;
             setForm({
               nome: parsed.nome ?? "",
               luogo: parsed.luogo ?? "",
@@ -139,6 +144,36 @@ function DatiAttestatoPage() {
           // ignore
         }
       }
+
+      // Nessun dato in questo browser: prima di mostrare il form vuoto,
+      // controlla se questo PUK ha già inviato i dati anagrafici da un
+      // altro browser/dispositivo. Se sì, li recupera e salta dritto al
+      // corso — evita di richiederli due volte (vedi
+      // docs/migration_participant_data.sql).
+      if (!hadLocalData) {
+        try {
+          const remote = await getParticipantFn({ data: { puk: act.puk } });
+          if (remote) {
+            const payload: Data = {
+              nome: remote.nome,
+              luogo: remote.luogo,
+              dataNascita: remote.dataNascita,
+              cf: remote.cf,
+              ditta: remote.ditta,
+              licenseKey: act.licenseKey,
+              licenseId: act.licenseId,
+              puk: act.puk,
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+            navigate({ to: "/corso" });
+            return;
+          }
+        } catch (err) {
+          console.error("getParticipantData fallito:", err);
+          // Non bloccante: si prosegue mostrando il form vuoto
+        }
+      }
+
       setReady(true);
     })();
   }, [navigate]);
@@ -166,6 +201,16 @@ function DatiAttestatoPage() {
             cf: form.cf.toUpperCase(),
           };
           localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+          saveParticipantFn({
+            data: {
+              puk: payload.puk,
+              nome: payload.nome,
+              luogo: payload.luogo,
+              dataNascita: payload.dataNascita,
+              cf: payload.cf,
+              ditta: payload.ditta,
+            },
+          }).catch((err) => console.error("saveParticipantData fallito:", err));
           setSaving(false);
           navigate({ to: "/corso" });
         }}
