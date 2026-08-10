@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { getUserId } from "@/lib/activation";
@@ -35,6 +35,7 @@ export const Route = createFileRoute("/")({
 });
 
 function HomePage() {
+  const navigate = useNavigate();
   const getStatusFn = useServerFn(getFunnelStatus);
   const [state, setState] = useState<"loading" | "landing" | "dashboard">("loading");
 
@@ -53,7 +54,19 @@ function HomePage() {
       }
       try {
         const status = await getStatusFn({ data: { puk } });
-        setState(status.valid ? "dashboard" : "landing");
+        if (!status.valid) {
+          setState("landing");
+          return;
+        }
+        if (status.certified) {
+          // Corso già completato: non ha senso mostrare la dashboard con
+          // "Vai al corso" e tutti i moduli segnati completati — si va
+          // dritti alla schermata di scelta (vedi attestato / nuova
+          // licenza), stessa destinazione di corso.tsx/test.tsx/attivazione.tsx.
+          navigate({ to: "/corso-gia-completato" });
+          return;
+        }
+        setState("dashboard");
       } catch (err) {
         console.error("getFunnelStatus error", err);
         setState("landing");
