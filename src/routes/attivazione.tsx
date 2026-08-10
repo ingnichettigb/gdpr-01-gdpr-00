@@ -51,6 +51,22 @@ function AttivazionePage() {
       }
       setEmail(verified);
 
+      // Via di fuga: se l'utente arriva da "corso-gia-completato" con
+      // l'esplicita richiesta di inserire un'altra licenza, salta la
+      // scorciatoia automatica una volta sola — altrimenti chi ha già una
+      // licenza certificata su questa email resterebbe bloccato in un
+      // vicolo cieco, senza modo di attivarne una diversa.
+      let skipShortcut = false;
+      try {
+        if (sessionStorage.getItem("skip_auto_activation") === "1") {
+          skipShortcut = true;
+          sessionStorage.removeItem("skip_auto_activation");
+        }
+      } catch {
+        // ignore
+      }
+      if (skipShortcut) return;
+
       // Scorciatoia per chi torna con la stessa email già verificata: prima
       // NON verificava nulla (leggeva solo un userId residuo in localStorage,
       // indipendente dall'email appena inserita — bug di sicurezza corretto
