@@ -339,6 +339,19 @@ function AttestatoPage() {
     }, 150);
   }
 
+  function handleOtherLicense() {
+    // Stessa via di fuga di corso-gia-completato.tsx: la scorciatoia "email
+    // già nota" in /attivazione può portare dritto qui se questa email ha
+    // già una licenza certificata, senza modo di attivarne una diversa.
+    try {
+      sessionStorage.removeItem("activation");
+      sessionStorage.setItem("skip_auto_activation", "1");
+    } catch {
+      // ignore
+    }
+    navigate({ to: "/attivazione" });
+  }
+
   return (
     <main className="min-h-screen bg-muted/30 py-8 px-4 print:bg-white print:p-0">
       <div className="max-w-4xl mx-auto space-y-4">
@@ -372,6 +385,16 @@ function AttestatoPage() {
               Scarica PDF
             </Button>
           </div>
+        </div>
+
+        <div className="text-center print:hidden">
+          <button
+            type="button"
+            onClick={handleOtherLicense}
+            className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
+          >
+            Hai un'altra licenza da attivare? Inserisci qui
+          </button>
         </div>
 
         {/* FRONTE */}
