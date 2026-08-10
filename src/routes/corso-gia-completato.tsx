@@ -48,25 +48,36 @@ function CorsoGiaCompletatoPage() {
           Se desideri erogare il corso a un'altra persona, puoi acquistare
           una nuova licenza (con nuovo codice PUK) al link seguente:
         </p>
-        <Button asChild size="lg" variant="outline">
-          <Link to="/attestato">Vedi il tuo attestato</Link>
-        </Button>
-        <Button asChild size="lg">
-          <a
-            href="https://corporateboostservice.eu/corso-gdpr-incaricati"
-            target="_blank"
-            rel="noopener noreferrer"
+        <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3 pt-1">
+          <Button
+            asChild
+            size="lg"
+            className="border-2 border-emerald-300 bg-emerald-50 text-black hover:bg-emerald-100"
           >
-            Acquista un nuovo corso
-          </a>
-        </Button>
-        <button
-          type="button"
-          onClick={handleOtherLicense}
-          className="block mx-auto text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
-        >
-          Hai un'altra licenza da attivare? Inserisci qui
-        </button>
+            <Link to="/attestato">Vedi il tuo attestato</Link>
+          </Button>
+          <Button
+            asChild
+            size="lg"
+            className="border-2 border-emerald-500 bg-emerald-300 text-black hover:bg-emerald-400"
+          >
+            <a
+              href="https://corporateboostservice.eu/corso-gdpr-incaricati"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Acquista un nuovo corso
+            </a>
+          </Button>
+          <Button
+            type="button"
+            onClick={handleOtherLicense}
+            size="lg"
+            className="border-2 border-emerald-700 bg-emerald-600 text-black hover:bg-emerald-700"
+          >
+            Hai un'altra licenza da attivare?
+          </Button>
+        </div>
       </div>
     </main>
   );
