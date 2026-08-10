@@ -89,7 +89,7 @@ function AttivazionePage() {
           }
           try {
             const cert = await checkCertFn({ data: { puk: lic.puk } });
-            navigate({ to: cert ? "/attestato" : "/termini" });
+            navigate({ to: cert ? "/corso-gia-completato" : "/termini" });
           } catch (err) {
             console.error("cert check error", err);
             navigate({ to: "/termini" });
@@ -151,11 +151,14 @@ function AttivazionePage() {
       // ignore
     }
 
-    // Se questo PUK ha già generato un certificato, porta direttamente all'attestato
+    // Se questo PUK ha già generato un certificato, porta alla schermata di
+    // scelta (vedi certificato / attiva un'altra licenza), non direttamente
+    // al certificato: l'utente deve poter scegliere, non ritrovarselo aperto
+    // senza altre opzioni visibili.
     try {
       const cert = await checkCertFn({ data: { puk: result.puk } });
       if (cert) {
-        navigate({ to: "/attestato" });
+        navigate({ to: "/corso-gia-completato" });
         return;
       }
     } catch (err) {
