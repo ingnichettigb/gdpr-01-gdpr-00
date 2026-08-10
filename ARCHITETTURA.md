@@ -214,6 +214,19 @@ su `corso-gia-completato.tsx` e `attestato.tsx`. Al click, pulisce
 flag a inizio effetto: se presente, lo consuma e **salta** la scorciatoia
 email, mostrando direttamente il form manuale licenza+PUK.
 
+### 6.7 Schermata di scelta invece di redirect diretto al certificato (2026-08-08)
+Prima, sia la scorciatoia email sia il submit manuale di `/attivazione`, se
+trovavano un certificato già esistente per il PUK, mandavano **direttamente**
+su `/attestato` — l'utente si trovava il certificato aperto senza nessuna
+interfaccia per scegliere se volerlo vedere o attivare un'altra licenza.
+**Fix**: entrambi i punti ora navigano a `/corso-gia-completato` invece che
+`/attestato`. Quella pagina è stata completata con un pulsante "Vedi il tuo
+attestato" (oltre a "Hai un'altra licenza da attivare?" e "Acquista un nuovo
+corso", già presenti) — diventa così l'unico, coerente punto di atterraggio
+per un PUK già certificato, qualunque sia il percorso che ci porta (form
+manuale, scorciatoia email, o il gate di `/corso`/`/test` via
+`getFunnelStatus`).
+
 ---
 
 ## 7. Sistema ABBANDONATO — da non implementare
