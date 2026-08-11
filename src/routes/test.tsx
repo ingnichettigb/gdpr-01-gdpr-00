@@ -33,40 +33,172 @@ type Question = {
 const QUESTIONS: Question[] = [
   {
     id: "q1",
-    text: "Qual è il compito principale dell'incaricato del trattamento?",
+    text: "Che cosa si intende per \"Dato Personale\" secondo il GDPR?",
     options: [
-      { key: "A", label: "Decidere finalità e mezzi del trattamento" },
-      { key: "B", label: "Eseguire le istruzioni del titolare" },
-      { key: "C", label: "Vendere i dati a terzi" },
-      { key: "D", label: "Conservare i dati per sempre" },
+      { key: "A", label: "Solo informazioni sanitarie" },
+      { key: "B", label: "Qualsiasi informazione riguardante una persona fisica identificata o identificabile" },
+      { key: "C", label: "Solo dati economici e fiscali" },
+      { key: "D", label: "Solo dati raccolti online" },
     ],
     correct: "B",
   },
   {
     id: "q2",
-    text: "Quale di queste azioni è vietata all'incaricato?",
+    text: "Qual è il principio di \"Liceità, Correttezza e Trasparenza\"?",
     options: [
-      { key: "A", label: "Accedere ai dati solo per motivi di servizio" },
-      { key: "B", label: "Seguire le istruzioni del titolare" },
-      { key: "C", label: "Condividere dati personali con colleghi non autorizzati" },
-      { key: "D", label: "Segnalare anomalie al DPO" },
+      { key: "A", label: "Raccogliere dati senza informare l'interessato" },
+      { key: "B", label: "Usare dati per scopi non dichiarati" },
+      { key: "C", label: "Trattare i dati in modo leale, con base giuridica valida e informazioni chiare" },
+      { key: "D", label: "Conservare i dati per sempre" },
     ],
     correct: "C",
   },
   {
     id: "q3",
-    text: "Cosa deve fare l'incaricato in caso di possibile violazione dei dati?",
+    text: "Cosa richiede il principio di \"Limitazione della Finalità\"?",
     options: [
-      { key: "A", label: "Ignorare l'evento" },
-      { key: "B", label: "Risolvere da solo il problema" },
-      { key: "C", label: "Segnalare immediatamente al titolare o al DPO" },
-      { key: "D", label: "Eliminare i dati coinvolti" },
+      { key: "A", label: "Dichiarare chiaramente perché si raccolgono i dati e non usarli per altri scopi" },
+      { key: "B", label: "Conservare i dati per ogni possibile utilizzo futuro" },
+      { key: "C", label: "Consentire l'uso dei dati da parte di terzi senza limiti" },
+      { key: "D", label: "Applicare la regola solo ai dati sensibili" },
+    ],
+    correct: "A",
+  },
+  {
+    id: "q4",
+    text: "Cosa significa \"Minimizzazione dei Dati\"?",
+    options: [
+      { key: "A", label: "Raccogliere più dati possibile per sicurezza" },
+      { key: "B", label: "Conservare dati anche se non servono" },
+      { key: "C", label: "Raccogliere solo i dati strettamente necessari e pertinenti" },
+      { key: "D", label: "Eliminare tutti i dati dopo 24 ore" },
+    ],
+    correct: "C",
+  },
+  {
+    id: "q5",
+    text: "Cosa prevede il principio di \"Esattezza\"?",
+    options: [
+      { key: "A", label: "Conservare i dati anche se obsoleti" },
+      { key: "B", label: "Non correggere errori per evitare modifiche" },
+      { key: "C", label: "Mantenere i dati corretti, aggiornati e privi di errori" },
+      { key: "D", label: "Aggiornare i dati solo una volta all'anno" },
+    ],
+    correct: "C",
+  },
+  {
+    id: "q6",
+    text: "Cosa stabilisce la \"Limitazione della Conservazione\"?",
+    options: [
+      { key: "A", label: "Conservare i dati per sempre" },
+      { key: "B", label: "Tenere i dati solo per il tempo necessario allo scopo dichiarato" },
+      { key: "C", label: "Archiviare i dati senza regole" },
+      { key: "D", label: "Distruggere i dati ogni settimana" },
+    ],
+    correct: "B",
+  },
+  {
+    id: "q7",
+    text: "Cosa garantisce il principio di \"Integrità e Riservatezza\"?",
+    options: [
+      { key: "A", label: "Accesso libero ai dati per tutti i dipendenti" },
+      { key: "B", label: "Nessuna protezione contro perdite o furti" },
+      { key: "C", label: "Protezione da accessi non autorizzati, perdita o modifica dei dati" },
+      { key: "D", label: "Condivisione dei dati con fornitori senza controllo" },
+    ],
+    correct: "C",
+  },
+  {
+    id: "q8",
+    text: "Cosa significa \"Responsabilizzazione\" (Accountability)?",
+    options: [
+      { key: "A", label: "Delegare la privacy al DPO" },
+      { key: "B", label: "Dimostrare con evidenze documentate la conformità al GDPR" },
+      { key: "C", label: "Conservare solo le informative" },
+      { key: "D", label: "Applicare il GDPR solo ai clienti" },
+    ],
+    correct: "B",
+  },
+  {
+    id: "q9",
+    text: "Chi è l'\"Interessato\" nel GDPR?",
+    options: [
+      { key: "A", label: "L'azienda che tratta i dati" },
+      { key: "B", label: "Il DPO" },
+      { key: "C", label: "La persona fisica a cui si riferiscono i dati personali" },
+      { key: "D", label: "Il responsabile esterno" },
+    ],
+    correct: "C",
+  },
+  {
+    id: "q10",
+    text: "Qual è il ruolo del \"Responsabile del Trattamento\"?",
+    options: [
+      { key: "A", label: "Decide le finalità del trattamento" },
+      { key: "B", label: "Tratta i dati per conto del Titolare seguendo istruzioni documentate" },
+      { key: "C", label: "È il proprietario dei dati" },
+      { key: "D", label: "È sempre interno all'azienda" },
+    ],
+    correct: "B",
+  },
+  {
+    id: "q11",
+    text: "Cosa prevede il concetto di \"Privacy by Design\"?",
+    options: [
+      { key: "A", label: "Applicare la privacy solo dopo la raccolta dei dati" },
+      { key: "B", label: "Integrare la protezione dei dati fin dalla progettazione dei processi e sistemi" },
+      { key: "C", label: "Limitarsi a informare gli utenti" },
+      { key: "D", label: "Usare la privacy solo per i dati sensibili" },
+    ],
+    correct: "B",
+  },
+  {
+    id: "q12",
+    text: "Entro quanto tempo va notificato un \"Data Breach\" al Garante?",
+    options: [
+      { key: "A", label: "Entro 24 ore" },
+      { key: "B", label: "Entro 72 ore dal momento in cui se ne viene a conoscenza" },
+      { key: "C", label: "Entro una settimana" },
+      { key: "D", label: "Solo se richiesto dall'interessato" },
+    ],
+    correct: "B",
+  },
+  {
+    id: "q13",
+    text: "Quali funzioni svolge il \"Garante per la Protezione dei Dati Personali\"?",
+    options: [
+      { key: "A", label: "Vigila sul rispetto del GDPR e può imporre sanzioni" },
+      { key: "B", label: "Gestisce i backup aziendali" },
+      { key: "C", label: "Redige contratti di lavoro" },
+      { key: "D", label: "Fornisce assistenza tecnica ai titolari" },
+    ],
+    correct: "A",
+  },
+  {
+    id: "q14",
+    text: "Quali sono i requisiti per una password sicura?",
+    options: [
+      { key: "A", label: "Solo lettere minuscole" },
+      { key: "B", label: "Nome e data di nascita dell'utente" },
+      { key: "C", label: "Lunghezza superiore a 8 caratteri, caratteri misti e nessun riferimento personale" },
+      { key: "D", label: "Password uguale per tutti i sistemi" },
+    ],
+    correct: "C",
+  },
+  {
+    id: "q15",
+    text: "Cosa è tassativamente vietato fare con documenti cartacei contenenti dati personali?",
+    options: [
+      { key: "A", label: "Archiviare in armadi chiusi" },
+      { key: "B", label: "Consegnare solo a personale autorizzato" },
+      { key: "C", label: "Riciclare carta contenente dati anche solo identificativi" },
+      { key: "D", label: "Conservare copie di sicurezza" },
     ],
     correct: "C",
   },
 ];
 
-const PASS_THRESHOLD = 2;
+const PASS_THRESHOLD = 10;
 
 function TestPage() {
   const navigate = useNavigate();
@@ -135,7 +267,7 @@ function TestPage() {
         <header>
           <h1 className="text-3xl font-bold tracking-tight">Test finale</h1>
           <p className="text-muted-foreground mt-2">
-            Rispondi alle 3 domande. Soglia di superamento: {PASS_THRESHOLD}/3.
+            Rispondi alle {QUESTIONS.length} domande. Soglia di superamento: {PASS_THRESHOLD}/{QUESTIONS.length}.
           </p>
         </header>
 
@@ -359,7 +491,7 @@ function TestPage() {
               <p className={passed ? "text-green-700" : "text-destructive"}>
                 {passed
                   ? "Complimenti, hai superato il test!"
-                  : `Non hai raggiunto la soglia minima (${PASS_THRESHOLD}/3). Riprova.`}
+                  : `Non hai raggiunto la soglia minima (${PASS_THRESHOLD}/${QUESTIONS.length}). Riprova.`}
               </p>
               <div className="flex justify-center gap-3 flex-wrap">
                 {passed ? (
