@@ -227,6 +227,40 @@ per un PUK già certificato, qualunque sia il percorso che ci porta (form
 manuale, scorciatoia email, o il gate di `/corso`/`/test` via
 `getFunnelStatus`).
 
+### 6.8 Dashboard non controllava `certified` (2026-08-08)
+Stesso sintomo della 6.7 ma su `index.tsx`: il gate della dashboard
+controllava solo `status.valid`, mai `status.certified`. Un PUK già
+certificato restava "valido" (licenza attiva, PUK non scaduto), quindi si
+vedeva la dashboard con tutti i moduli "Completato" e il pulsante "Vai al
+corso" — invece di atterrare sulla schermata di scelta del punto 6.7.
+**Fix**: `HomePage` in `index.tsx` ora controlla anche `status.certified` e,
+se vero, naviga a `/corso-gia-completato` prima di impostare lo stato
+`"dashboard"` — stesso pattern già usato in `corso.tsx`/`test.tsx`.
+
+### 6.9 Dati cross-persona su browser condivisi (2026-08-08)
+Due bug distinti, stessa causa: `localStorage.attestato_data` non è mai
+stato scopato per PUK — su un computer già usato da un'altra persona per un
+altro corso, quella chiave contiene ancora **i suoi** dati, non quelli
+dell'attivazione corrente.
+- **`dati-attestato.tsx`**: il prefill del form leggeva `attestato_data`
+  senza controllare che appartenesse al PUK attivo in quel momento —
+  mostrava l'anagrafica di chi aveva usato il browser prima. **Fix**: il
+  prefill è valido solo se `parsed.puk === act.puk`; altrimenti si procede
+  come se non ci fosse nulla in locale (e si passa al controllo server già
+  esistente, vedi §6).
+- **`test.tsx` (più grave)**: al superamento del test, `licenseId`/
+  `licenseKey`/`puk` per salvare il certificato venivano presi **da**
+  `attestato_data`, invece che dalla sessione reale (`currentPuk()`) — su un
+  browser con dati di un'altra persona, il certificato rischiava di essere
+  salvato sul PUK sbagliato, con nome/CF/ditta sbagliati. **Fix**: l'identità
+  (`licenseId`/`licenseKey`/`puk`) viene sempre da `currentPuk()` e dalla
+  sessione (`sessionStorage.activation`/`localStorage.lastActivation`), mai
+  da `attestato_data` se il suo `puk` non coincide con quello corrente. I
+  dati anagrafici, in quel caso, vengono recuperati dal server
+  (`getParticipantData`, vedi §6 nuovo/`participant_data`) invece che da
+  localStorage. Se nemmeno il server li ha, il certificato non viene
+  generato (errore loggato) invece di usare dati sbagliati.
+
 ---
 
 ## 7. Sistema ABBANDONATO — da non implementare
