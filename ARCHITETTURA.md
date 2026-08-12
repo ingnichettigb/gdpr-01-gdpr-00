@@ -126,8 +126,7 @@ anche nella scorciatoia di `attivazione.tsx`).
 getFunnelStatus({ puk: string }) → {
   valid: boolean;        // PUK esiste, non scaduto; licenza collegata attiva, non scaduta
   reason: string | null; // es. "puk_non_trovato", "licenza_scaduta"
-  module1: boolean;      // da video_progress, non da localStorage
-  module2: boolean;
+  completedModules: string[]; // module_key completati (da video_progress), es. ["lezione1","lezione3"]
   certified: boolean;    // esiste già un certificato per questo PUK
 }
 ```
@@ -136,7 +135,7 @@ Comportamento standard nelle pagine che la chiamano:
 - `puk === "no-puk"` (nessun candidato risolvibile) → redirect `/attivazione`
 - `!valid` → redirect `/attivazione`
 - `certified === true` (e la pagina non è `/attestato`) → redirect `/corso-gia-completato`
-- altrimenti → `module1`/`module2` decidono cosa mostrare/sbloccare
+- altrimenti → `completedModules` decide quale modulo è sbloccato/da mostrare (confronto con l'elenco `LESSONS` di `corso.tsx`)
 
 **`currentPuk()`** (in `src/components/VideoLesson.tsx`, esportata) risolve il
 PUK "candidato" con fallback a 3 livelli: `sessionStorage.activation` →
@@ -303,7 +302,8 @@ su 4 del 2026-08-06.
 - `APP_CODE = "01-GDPR-00"` (`src/lib/app-config.ts`) — **va cambiato in
   `"02-GDPR-00"` quando si duplica su quel repo**, insieme a nome corso,
   dominio, titoli `<head>`
-- `LESSON_1 = "lezione1"`, `LESSON_2 = "lezione2"` — moduli fissi del corso
+- `LESSONS` (array in `src/routes/corso.tsx`) — 10 moduli del corso, module_key
+  `"lezione1"`..`"lezione10"` (aggiornato 2026-08-12, prima erano solo 2)
 - `TERMS_VERSION` (`app-config.ts`) — versione condizioni d'uso, incrementarla
   forza una nuova accettazione per tutti i PUK
 
