@@ -180,16 +180,21 @@ export function VideoLesson({
     setMaxProgress(parseFloat(localStorage.getItem(k.max) ?? "0") || 0);
   }, [videoId, serverCompleted, k.completed, k.max]);
 
-  useEffect(() => {
-    onCompletedChange?.(completed);
-  }, [completed, onCompletedChange]);
+  // NOTA: onCompletedChange va notificato SOLO da handleEnded (vero
+  // completamento avvenuto ora), MAI da un effect legato a `completed` in
+  // generale. Un effect generico spara anche quando il componente monta con
+  // un modulo GIA' completato in passato (riapertura per rivedere un video),
+  // facendo credere al genitore che l'utente abbia "appena finito" quel
+  // modulo e scatenando un avanzamento automatico indesiderato al modulo
+  // successivo — impedendo di fatto la revisione dei video già visti.
 
   const handleEnded = useCallback(() => {
     localStorage.setItem(k.completed, "true");
     localStorage.setItem(k.progress, "0");
     setCompleted(true);
+    onCompletedChange?.(true);
     void onEnded?.();
-  }, [k.completed, k.progress, onEnded]);
+  }, [k.completed, k.progress, onEnded, onCompletedChange]);
 
   // Crea/distrugge il player YouTube quando il video (o lo stato locked) cambia.
   useEffect(() => {

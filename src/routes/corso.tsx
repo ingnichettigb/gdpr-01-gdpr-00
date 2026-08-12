@@ -144,12 +144,18 @@ function CorsoPage() {
   // l'auto-avanzamento.
   const handleModuleComplete = (index: number) => (done: boolean) => {
     if (!done) return;
+    const wasAlreadyCompleted = completed[index];
     setCompleted((prev) => {
       if (prev[index]) return prev; // già segnato, nessuna transizione
       const next = [...prev];
       next[index] = true;
       return next;
     });
+    // Avanza SOLO se il modulo non era già completato prima d'ora: altrimenti
+    // riaprire un video già visto per rivederlo (es. tornare al Modulo 2
+    // mentre si è al Modulo 5) provocherebbe un salto automatico al modulo
+    // successivo, impedendo di fatto la revisione.
+    if (wasAlreadyCompleted) return;
     setActive((prevActive) => {
       if (prevActive !== `mod${index + 1}`) return prevActive;
       return index + 1 < LESSONS.length ? (`mod${index + 2}` as StepKey) : "test";
