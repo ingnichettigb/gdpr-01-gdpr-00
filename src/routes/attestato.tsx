@@ -314,7 +314,7 @@ function AttestatoPage() {
           "attestato_issued_at_",
           "test_passed_",
         ];
-        for (const lesson of ["lezione1", "lezione2"]) {
+        for (const lesson of Array.from({ length: 10 }, (_, i) => `lezione${i + 1}`)) {
           pukScopedPrefixes.forEach((prefix) => {
             localStorage.removeItem(`${prefix}${puk}_${lesson}`);
           });

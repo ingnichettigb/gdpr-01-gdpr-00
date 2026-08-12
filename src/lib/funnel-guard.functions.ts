@@ -6,8 +6,8 @@ const pukSchema = z.object({ puk: z.string().min(1) });
 export type FunnelStatus = {
   valid: boolean;
   reason: string | null;
-  module1: boolean;
-  module2: boolean;
+  /** module_key completati per questo PUK (es. "lezione1".."lezione10") */
+  completedModules: string[];
   certified: boolean;
 };
 
@@ -33,8 +33,7 @@ export const getFunnelStatus = createServerFn({ method: "POST" })
     const notValid = (reason: string): FunnelStatus => ({
       valid: false,
       reason,
-      module1: false,
-      module2: false,
+      completedModules: [],
       certified: false,
     });
 
@@ -80,12 +79,9 @@ export const getFunnelStatus = createServerFn({ method: "POST" })
         .select("module_key, completed")
         .eq("puk_code", data.puk);
 
-      const module1 = !!progress?.some(
-        (p) => p.module_key === "lezione1" && p.completed,
-      );
-      const module2 = !!progress?.some(
-        (p) => p.module_key === "lezione2" && p.completed,
-      );
+      const completedModules = (progress ?? [])
+        .filter((p) => p.completed)
+        .map((p) => p.module_key);
 
       const { data: cert } = await supabaseExternal
         .from("certificates")
@@ -96,8 +92,7 @@ export const getFunnelStatus = createServerFn({ method: "POST" })
       return {
         valid: true,
         reason: null,
-        module1,
-        module2,
+        completedModules,
         certified: !!cert,
       };
     } catch (err) {

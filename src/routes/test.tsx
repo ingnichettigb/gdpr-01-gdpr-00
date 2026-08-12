@@ -200,6 +200,10 @@ const QUESTIONS: Question[] = [
 
 const PASS_THRESHOLD = 10;
 
+// Elenco dei module_key dei 10 video del corso — deve restare allineato con
+// LESSONS in corso.tsx (stessi valori "lezione1".."lezione10").
+const ALL_LESSONS = Array.from({ length: 10 }, (_, i) => `lezione${i + 1}`);
+
 function TestPage() {
   const navigate = useNavigate();
   const saveCertFn = useServerFn(saveCertificate);
@@ -228,7 +232,7 @@ function TestPage() {
           navigate({ to: "/corso-gia-completato" });
           return;
         }
-        setAllowed(status.module1 && status.module2);
+        setAllowed(ALL_LESSONS.every((l) => status.completedModules.includes(l)));
       } catch (err) {
         console.error("getFunnelStatus error", err);
         // Il server non ha potuto confermare: non si concede l'accesso.
@@ -389,7 +393,7 @@ function TestPage() {
                 // non su queste chiavi). Non tocchiamo attestato_data /
                 // lastActivation / attestato_cert_* / test_passed_*: servono
                 // al recupero attestato multi-browser.
-                for (const lesson of ["lezione1", "lezione2"]) {
+                for (const lesson of ALL_LESSONS) {
                   localStorage.removeItem(`completed_${currentPukForCert}_${lesson}`);
                   localStorage.removeItem(`progress_${currentPukForCert}_${lesson}`);
                   localStorage.removeItem(`max_progress_${currentPukForCert}_${lesson}`);

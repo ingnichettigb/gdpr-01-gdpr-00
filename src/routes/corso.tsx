@@ -15,22 +15,76 @@ export const Route = createFileRoute("/corso")({
       {
         name: "description",
         content:
-          "Modulo formativo privacy con due video sequenziali e test finale a scelta multipla.",
+          "Modulo formativo privacy con dieci video sequenziali e test finale a scelta multipla.",
       },
     ],
   }),
   component: CorsoPage,
 });
 
-const LESSON_1 = "lezione1";
-const LESSON_2 = "lezione2";
+// Elenco moduli video del corso, in sequenza. "key" è il module_key salvato
+// su video_progress (Supabase) — NON cambiare i valori esistenti (lezione1,
+// lezione2) per non perdere la corrispondenza con i completamenti già
+// registrati.
+const LESSONS: { key: string; title: string; videoUrl: string }[] = [
+  {
+    key: "lezione1",
+    title: "Modulo 1 — My Privacy: il Regolamento europeo in materia di protezione dei dati personali",
+    videoUrl: "https://youtu.be/7M1kTqg_UlE",
+  },
+  {
+    key: "lezione2",
+    title: "Modulo 2 — I 7 Principi del GDPR (prima parte)",
+    videoUrl: "https://youtu.be/qtAdKxFazjs",
+  },
+  {
+    key: "lezione3",
+    title: "Modulo 3 — I 7 Principi del GDPR (seconda parte)",
+    videoUrl: "https://youtu.be/e8A71MhwGYI",
+  },
+  {
+    key: "lezione4",
+    title: "Modulo 4 — L'Interessato",
+    videoUrl: "https://youtu.be/Wwkun2SeetI",
+  },
+  {
+    key: "lezione5",
+    title: "Modulo 5 — Le Figure Chiave del GDPR",
+    videoUrl: "https://youtu.be/iSxAr5izHrQ",
+  },
+  {
+    key: "lezione6",
+    title: "Modulo 6 — Un Nuovo Approccio",
+    videoUrl: "https://youtu.be/qe62Se_HgVo",
+  },
+  {
+    key: "lezione7",
+    title: "Modulo 7 — Responsabilità e Sanzioni",
+    videoUrl: "https://youtu.be/aJL1c7LzP6E",
+  },
+  {
+    key: "lezione8",
+    title: "Modulo 8 — Privacy come Processo Continuo",
+    videoUrl: "https://youtu.be/pNXYDiyDV_M",
+  },
+  {
+    key: "lezione9",
+    title: "Modulo 9 — Documenti Cartacei",
+    videoUrl: "https://youtu.be/2-q_BCWPDpk",
+  },
+  {
+    key: "lezione10",
+    title: "Modulo 10 — Governance e Compliance GDPR",
+    videoUrl: "https://youtu.be/CmMerixgD-0",
+  },
+];
 
-type StepKey = "mod1" | "mod2" | "test";
+type StepKey = `mod${number}` | "test";
 
 function CorsoPage() {
   const navigate = useNavigate();
-  const [c1, setC1] = useState(false);
-  const [c2, setC2] = useState(false);
+  // completed[i] = true se LESSONS[i] è stato completato
+  const [completed, setCompleted] = useState<boolean[]>(() => LESSONS.map(() => false));
   const [active, setActive] = useState<StepKey>("mod1");
   const getStatusFn = useServerFn(getFunnelStatus);
   const markCompletedFn = useServerFn(markVideoCompleted);
@@ -43,8 +97,7 @@ function CorsoPage() {
         return;
       }
 
-      let done1 = isLessonCompleted(LESSON_1);
-      let done2 = isLessonCompleted(LESSON_2);
+      const doneArr = LESSONS.map((l) => isLessonCompleted(l.key));
 
       // Rivalida SEMPRE col server: il PUK risolto lato client (anche via
       // fallback localStorage per il recupero cross-browser) deve essere
@@ -62,45 +115,48 @@ function CorsoPage() {
         }
         // Allinea con lo stato reale del server (fonte di verità), scrive
         // anche in localStorage per coerenza futura/offline-first.
-        if (status.module1 && !done1) {
-          localStorage.setItem(`completed_${puk}_${LESSON_1}`, "true");
-          done1 = true;
-        }
-        if (status.module2 && !done2) {
-          localStorage.setItem(`completed_${puk}_${LESSON_2}`, "true");
-          done2 = true;
-        }
+        LESSONS.forEach((l, i) => {
+          if (status.completedModules.includes(l.key) && !doneArr[i]) {
+            localStorage.setItem(`completed_${puk}_${l.key}`, "true");
+            doneArr[i] = true;
+          }
+        });
       } catch (err) {
         console.error("getFunnelStatus fallito:", err);
         navigate({ to: "/attivazione" });
         return;
       }
 
-      setC1(done1);
-      setC2(done2);
-      // Auto-avanza al primo step non completato all'apertura
-      if (done1 && !done2) setActive("mod2");
-      else if (done1 && done2) setActive("test");
+      setCompleted(doneArr);
+      // Auto-avanza al primo modulo non completato all'apertura
+      const firstIncomplete = doneArr.findIndex((d) => !d);
+      if (firstIncomplete === -1) setActive("test");
+      else if (firstIncomplete > 0) setActive(`mod${firstIncomplete + 1}` as StepKey);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [puk]);
 
   // Avanza automaticamente solo alla TRANSIZIONE da non-completato a completato
-  // (non al semplice re-mount di un modulo già superato)
+  // (non al semplice re-mount di un modulo già superato).
   // Il completamento è monodirezionale: ignoriamo le notifiche `false`
   // (che il child emette al mount prima di leggere localStorage), altrimenti
   // aprendo un modulo già superato azzereremmo lo stato e ri-scateneremmo
   // l'auto-avanzamento.
-  const handleC1 = (done: boolean) => {
+  const handleModuleComplete = (index: number) => (done: boolean) => {
     if (!done) return;
-    if (!c1 && active === "mod1") setActive("mod2");
-    setC1(true);
+    setCompleted((prev) => {
+      if (prev[index]) return prev; // già segnato, nessuna transizione
+      const next = [...prev];
+      next[index] = true;
+      return next;
+    });
+    setActive((prevActive) => {
+      if (prevActive !== `mod${index + 1}`) return prevActive;
+      return index + 1 < LESSONS.length ? (`mod${index + 2}` as StepKey) : "test";
+    });
   };
-  const handleC2 = (done: boolean) => {
-    if (!done) return;
-    if (!c2 && active === "mod2") setActive("test");
-    setC2(true);
-  };
+
+  const allCompleted = completed.every(Boolean);
 
   const steps: {
     key: StepKey;
@@ -110,28 +166,20 @@ function CorsoPage() {
     unlocked: boolean;
     completed: boolean;
   }[] = [
-    {
-      key: "mod1",
-      label: "Modulo 1",
-      subtitle: "Guida Pratica",
+    ...LESSONS.map((l, i) => ({
+      key: `mod${i + 1}` as StepKey,
+      label: `Modulo ${i + 1}`,
+      subtitle: l.title.replace(/^Modulo \d+ — /, ""),
       icon: PlayCircle,
-      unlocked: true,
-      completed: c1,
-    },
-    {
-      key: "mod2",
-      label: "Modulo 2",
-      subtitle: "Processo continuo",
-      icon: PlayCircle,
-      unlocked: c1,
-      completed: c2,
-    },
+      unlocked: i === 0 || completed[i - 1],
+      completed: completed[i],
+    })),
     {
       key: "test",
       label: "Test finale",
       subtitle: "Quiz a scelta multipla",
       icon: GraduationCap,
-      unlocked: c1 && c2,
+      unlocked: allCompleted,
       completed: false,
     },
   ];
@@ -168,55 +216,44 @@ function CorsoPage() {
           </Button>
         </header>
 
-
         {/* Area attiva */}
         <section className="animate-fade-in">
-          {active === "mod1" && (
-            <VideoLesson
-              videoId={LESSON_1}
-              videoUrl="https://www.w3schools.com/html/mov_bbb.mp4"
-              title="Modulo 1 — Guida Pratica per l'Addetto e l'Incaricato"
-              hideTestButton
-              onCompletedChange={handleC1}
-              onEnded={async () => {
-                if (puk === "no-puk") return;
-                try {
-                  await markCompletedFn({ data: { puk, moduleKey: LESSON_1 } });
-                } catch (err) {
-                  console.error("markVideoCompleted (modulo 1) fallito:", err);
-                }
-              }}
-            />
-          )}
-          {active === "mod2" && (
-            <VideoLesson
-              videoId={LESSON_2}
-              videoUrl="https://www.w3schools.com/html/movie.mp4"
-              title="Modulo 2 — Privacy come processo continuo"
-              hideTestButton
-              locked={!c1}
-              onCompletedChange={handleC2}
-              onEnded={async () => {
-                if (puk === "no-puk") return;
-                try {
-                  await markCompletedFn({ data: { puk, moduleKey: LESSON_2 } });
-                } catch (err) {
-                  console.error("markVideoCompleted (modulo 2) fallito:", err);
-                }
-              }}
-            />
-          )}
+          {LESSONS.map((l, i) => {
+            const stepKey = `mod${i + 1}` as StepKey;
+            if (active !== stepKey) return null;
+            const locked = i > 0 && !completed[i - 1];
+            return (
+              <VideoLesson
+                key={l.key}
+                videoId={l.key}
+                videoUrl={l.videoUrl}
+                title={l.title}
+                hideTestButton
+                locked={locked}
+                serverCompleted={completed[i]}
+                onCompletedChange={handleModuleComplete(i)}
+                onEnded={async () => {
+                  if (puk === "no-puk") return;
+                  try {
+                    await markCompletedFn({ data: { puk, moduleKey: l.key } });
+                  } catch (err) {
+                    console.error(`markVideoCompleted (${l.key}) fallito:`, err);
+                  }
+                }}
+              />
+            );
+          })}
           {active === "test" && (
             <div className="rounded-xl border bg-card p-6 space-y-4">
               <h2 className="text-xl font-semibold" style={{ color: "#003153" }}>
                 Test finale
               </h2>
               <p className="text-sm text-muted-foreground">
-                {c1 && c2
+                {allCompleted
                   ? "Hai completato tutti i moduli. Puoi accedere al test finale."
-                  : "Completa entrambi i moduli per sbloccare il test."}
+                  : "Completa tutti i moduli per sbloccare il test."}
               </p>
-              {c1 && c2 ? (
+              {allCompleted ? (
                 <Button asChild>
                   <Link to="/test">Vai al test</Link>
                 </Button>
