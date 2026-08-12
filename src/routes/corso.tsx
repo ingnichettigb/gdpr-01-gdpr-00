@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { VideoLesson, isLessonCompleted, currentPuk } from "@/components/VideoLesson";
 import { markVideoCompleted } from "@/lib/video-progress.functions";
@@ -33,6 +33,19 @@ function CorsoPage() {
   const getStatusFn = useServerFn(getFunnelStatus);
   const markCompletedFn = useServerFn(markVideoCompleted);
   const puk = currentPuk();
+  const activeCardRef = useRef<HTMLElement | null>(null);
+
+  // Centra automaticamente nel carosello la card del modulo attivo: con 10+1
+  // step non tutti sono visibili senza scorrere, quindi ogni cambio modulo
+  // (click manuale o avanzamento automatico) porta in vista, centrata,
+  // quella corrente — un aiuto in più per capire subito "dove sono".
+  useEffect(() => {
+    activeCardRef.current?.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    });
+  }, [active]);
 
   useEffect(() => {
     (async () => {
@@ -273,6 +286,7 @@ function CorsoPage() {
                   {s.key === "test" && clickable ? (
                     <Link
                       to="/test"
+                      ref={isActive ? (activeCardRef as React.Ref<HTMLAnchorElement>) : undefined}
                       className={cardClass}
                       style={cardStyle}
                       title={`${s.label} — ${s.subtitle}`}
@@ -281,6 +295,7 @@ function CorsoPage() {
                     </Link>
                   ) : (
                     <button
+                      ref={isActive ? (activeCardRef as React.Ref<HTMLButtonElement>) : undefined}
                       type="button"
                       onClick={() => clickable && setActive(s.key)}
                       disabled={!clickable}
