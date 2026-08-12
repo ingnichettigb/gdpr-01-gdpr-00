@@ -270,7 +270,7 @@ function CorsoPage() {
         {/* Carosello step */}
         <nav
           aria-label="Progresso del corso"
-          className="border-t pt-4 -mx-4 px-4 overflow-x-auto"
+          className="scrollbar-always-visible border-t pt-4 -mx-4 px-4 overflow-x-auto"
         >
           <ul className="flex gap-3 min-w-max pb-2">
             {steps.map((s) => {
@@ -278,19 +278,20 @@ function CorsoPage() {
               const clickable = s.unlocked;
               const Icon = s.icon;
               const cardClass = cn(
-                "relative w-40 text-left rounded-lg border p-3 transition-all",
+                "relative w-40 text-left rounded-lg border-2 p-3 transition-all",
                 "flex flex-col gap-1",
                 isActive
-                  ? "border-2 shadow-md bg-card"
-                  : "border-border bg-card/60 hover:bg-card",
-                !clickable && "opacity-50 cursor-not-allowed hover:bg-card/60",
+                  ? "shadow-md bg-card"
+                  : clickable
+                    ? "border-border bg-card hover:border-[#003153]/40 hover:bg-accent/40"
+                    : "border-border/60 bg-muted/30 cursor-not-allowed",
               );
               const cardStyle = isActive ? { borderColor: "#003153" } : undefined;
               const inner = (
                 <>
                   <div className="flex items-center justify-between">
                     <Icon
-                      className="h-5 w-5"
+                      className={cn("h-5 w-5", !clickable && "text-muted-foreground")}
                       style={{ color: clickable ? "#003153" : undefined }}
                     />
                     {s.completed ? (
@@ -299,10 +300,16 @@ function CorsoPage() {
                       <Lock className="h-4 w-4 text-muted-foreground" />
                     ) : null}
                   </div>
-                  <div className="text-sm font-semibold" style={{ color: "#003153" }}>
+                  <div
+                    className={cn(
+                      "text-sm font-semibold",
+                      !clickable && "text-foreground/70",
+                    )}
+                    style={clickable ? { color: "#003153" } : undefined}
+                  >
                     {s.label}
                   </div>
-                  <div className="text-xs text-muted-foreground truncate">
+                  <div className="text-xs text-foreground/60 truncate">
                     {s.subtitle}
                   </div>
                 </>
@@ -310,7 +317,12 @@ function CorsoPage() {
               return (
                 <li key={s.key}>
                   {s.key === "test" && clickable ? (
-                    <Link to="/test" className={cardClass} style={cardStyle}>
+                    <Link
+                      to="/test"
+                      className={cardClass}
+                      style={cardStyle}
+                      title={`${s.label} — ${s.subtitle}`}
+                    >
                       {inner}
                     </Link>
                   ) : (
@@ -321,6 +333,7 @@ function CorsoPage() {
                       aria-current={isActive ? "step" : undefined}
                       className={cardClass}
                       style={cardStyle}
+                      title={`${s.label} — ${s.subtitle}`}
                     >
                       {inner}
                     </button>

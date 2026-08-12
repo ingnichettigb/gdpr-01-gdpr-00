@@ -142,3 +142,23 @@
     color: var(--color-foreground);
   }
 }
+
+/* Scrollbar orizzontale sempre visibile (non solo su hover), usata nel
+   carosello dei moduli del corso — di default molti browser/OS la nascondono
+   finché non si passa sopra col mouse, rendendo poco intuibile che si può
+   scorrere lateralmente. */
+.scrollbar-always-visible {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: var(--color-muted-foreground) transparent; /* Firefox */
+}
+.scrollbar-always-visible::-webkit-scrollbar {
+  height: 8px;
+}
+.scrollbar-always-visible::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-always-visible::-webkit-scrollbar-thumb {
+  background-color: var(--color-muted-foreground);
+  border-radius: 9999px;
+  opacity: 0.5;
+}
