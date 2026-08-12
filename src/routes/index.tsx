@@ -1,13 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { getUserId } from "@/lib/activation";
 import { currentPuk } from "@/components/VideoLesson";
 import { getFunnelStatus } from "@/lib/funnel-guard.functions";
-import {
-  getCourseModules,
-  getCourseProgress,
-} from "@/lib/course.functions";
+import { LESSONS } from "@/lib/course-content";
+import { PASS_THRESHOLD, TEST_QUESTION_COUNT } from "./test";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +35,7 @@ function HomePage() {
   const navigate = useNavigate();
   const getStatusFn = useServerFn(getFunnelStatus);
   const [state, setState] = useState<"loading" | "landing" | "dashboard">("loading");
+  const [completedModules, setCompletedModules] = useState<string[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -66,6 +64,7 @@ function HomePage() {
           navigate({ to: "/corso-gia-completato" });
           return;
         }
+        setCompletedModules(status.completedModules);
         setState("dashboard");
       } catch (err) {
         console.error("getFunnelStatus error", err);
@@ -77,7 +76,7 @@ function HomePage() {
 
   if (state === "loading") return null;
   if (state === "landing") return <Landing />;
-  return <Dashboard />;
+  return <Dashboard completedModules={completedModules} />;
 }
 
 function Landing() {
@@ -118,34 +117,9 @@ function Landing() {
   );
 }
 
-function Dashboard() {
-  const modulesFn = useServerFn(getCourseModules);
-  const progressFn = useServerFn(getCourseProgress);
-  const [modules, setModules] = useState<
-    { id: string; title: string; order_index: number }[]
-  >([]);
-  const [completedIds, setCompletedIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const mods = await modulesFn({});
-        setModules(mods.modules);
-        const uid = getUserId();
-        if (uid) {
-          const progress = await progressFn({ data: { userId: uid } });
-          setCompletedIds(progress.completedModuleIds);
-        }
-      } catch (err) {
-        console.error("dashboard load error", err);
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const isDone = (id: string) => completedIds.includes(id);
-  const started = completedIds.length > 0;
-  const allDone = modules.length > 0 && modules.every((m) => isDone(m.id));
+function Dashboard({ completedModules }: { completedModules: string[] }) {
+  const isDone = (key: string) => completedModules.includes(key);
+  const allDone = LESSONS.every((l) => isDone(l.key));
 
   const prussian = "#003153";
   return (
@@ -172,11 +146,11 @@ function Dashboard() {
         </header>
 
         <section className="grid gap-4 sm:grid-cols-3">
-          {modules.map((m, i) => {
-            const done = isDone(m.id);
-            const unlocked = i === 0 || isDone(modules[i - 1]!.id);
+          {LESSONS.map((l, i) => {
+            const done = isDone(l.key);
+            const unlocked = i === 0 || isDone(LESSONS[i - 1]!.key);
             return (
-              <Card key={m.id}>
+              <Card key={l.key}>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <PlayCircle className="h-5 w-5 text-primary" />
@@ -184,7 +158,9 @@ function Dashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <p className="text-sm text-muted-foreground">{m.title}</p>
+                  <p className="text-sm text-muted-foreground truncate" title={l.title}>
+                    {l.title.replace(/^Modulo \d+ — /, "")}
+                  </p>
                   <div className="flex items-center justify-between">
                     {done ? (
                       <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 dark:bg-green-950/30">
@@ -213,7 +189,7 @@ function Dashboard() {
             </CardHeader>
             <CardContent className="space-y-2">
               <p className="text-sm text-muted-foreground">
-                3 domande a scelta multipla. Soglia 2/3.
+                {TEST_QUESTION_COUNT} domande a scelta multipla. Soglia {PASS_THRESHOLD}/{TEST_QUESTION_COUNT}.
               </p>
               <div className="flex items-center justify-between">
                 {allDone ? (
@@ -238,16 +214,16 @@ function Dashboard() {
           </h2>
           <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
             <li>
-              Clicca su <strong className="text-foreground">"Inizia il corso"</strong> per aprire la pagina dei video.
+              Clicca su <strong className="text-foreground">"Vai al corso"</strong> per aprire la pagina dei video.
             </li>
             <li>
-              Guarda il <strong className="text-foreground">Modulo 1</strong> dall'inizio alla fine: il sistema salva automaticamente il punto in cui ti fermi.
+              Guarda i <strong className="text-foreground">{LESSONS.length} moduli</strong> in ordine, dall'inizio alla fine: il sistema salva automaticamente il punto in cui ti fermi, e potrai sempre tornare a rivedere un modulo già completato.
             </li>
             <li>
-              Una volta completato il primo video, si sblocca il <strong className="text-foreground">Modulo 2</strong>.
+              Ogni modulo si sblocca solo dopo aver completato quello precedente.
             </li>
             <li>
-              Dopo aver visto entrambi i video, il <strong className="text-foreground">Test finale</strong> si sblocca. Rispondi alle 3 domande: devi totalizzare almeno 2 risposte corrette per superarlo.
+              Dopo aver visto tutti i moduli, il <strong className="text-foreground">Test finale</strong> si sblocca. Rispondi alle {TEST_QUESTION_COUNT} domande: devi totalizzare almeno {PASS_THRESHOLD} risposte corrette per superarlo.
             </li>
             <li>
               Se non superi il test al primo tentativo, puoi <strong className="text-foreground">riprovare</strong> fino al raggiungimento del punteggio minimo.

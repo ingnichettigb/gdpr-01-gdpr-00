@@ -8,6 +8,7 @@ import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { currentPuk } from "@/components/VideoLesson";
 import { saveCertificate } from "@/lib/certificate.functions";
 import { getFunnelStatus } from "@/lib/funnel-guard.functions";
+import { LESSONS } from "@/lib/course-content";
 import { getParticipantData } from "@/lib/participant-data.functions";
 
 export const Route = createFileRoute("/test")({
@@ -198,11 +199,12 @@ const QUESTIONS: Question[] = [
   },
 ];
 
-const PASS_THRESHOLD = 10;
+export const PASS_THRESHOLD = 10;
+export const TEST_QUESTION_COUNT = QUESTIONS.length;
 
-// Elenco dei module_key dei 10 video del corso — deve restare allineato con
-// LESSONS in corso.tsx (stessi valori "lezione1".."lezione10").
-const ALL_LESSONS = Array.from({ length: 10 }, (_, i) => `lezione${i + 1}`);
+// Elenco dei module_key dei 10 video del corso, derivato dalla fonte unica
+// condivisa (course-content.ts) — così resta sempre allineato con corso.tsx.
+export const ALL_LESSONS = LESSONS.map((l) => l.key);
 
 function TestPage() {
   const navigate = useNavigate();

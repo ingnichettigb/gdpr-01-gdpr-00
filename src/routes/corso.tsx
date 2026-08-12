@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { VideoLesson, isLessonCompleted, currentPuk } from "@/components/VideoLesson";
 import { markVideoCompleted } from "@/lib/video-progress.functions";
 import { getFunnelStatus } from "@/lib/funnel-guard.functions";
+import { LESSONS } from "@/lib/course-content";
 import { Button } from "@/components/ui/button";
 import { Lock, CheckCircle2, PlayCircle, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,63 +22,6 @@ export const Route = createFileRoute("/corso")({
   }),
   component: CorsoPage,
 });
-
-// Elenco moduli video del corso, in sequenza. "key" è il module_key salvato
-// su video_progress (Supabase) — NON cambiare i valori esistenti (lezione1,
-// lezione2) per non perdere la corrispondenza con i completamenti già
-// registrati.
-const LESSONS: { key: string; title: string; videoUrl: string }[] = [
-  {
-    key: "lezione1",
-    title: "Modulo 1 — My Privacy: il Regolamento europeo in materia di protezione dei dati personali",
-    videoUrl: "https://youtu.be/7M1kTqg_UlE",
-  },
-  {
-    key: "lezione2",
-    title: "Modulo 2 — I 7 Principi del GDPR (prima parte)",
-    videoUrl: "https://youtu.be/qtAdKxFazjs",
-  },
-  {
-    key: "lezione3",
-    title: "Modulo 3 — I 7 Principi del GDPR (seconda parte)",
-    videoUrl: "https://youtu.be/e8A71MhwGYI",
-  },
-  {
-    key: "lezione4",
-    title: "Modulo 4 — L'Interessato",
-    videoUrl: "https://youtu.be/Wwkun2SeetI",
-  },
-  {
-    key: "lezione5",
-    title: "Modulo 5 — Le Figure Chiave del GDPR",
-    videoUrl: "https://youtu.be/iSxAr5izHrQ",
-  },
-  {
-    key: "lezione6",
-    title: "Modulo 6 — Un Nuovo Approccio",
-    videoUrl: "https://youtu.be/qe62Se_HgVo",
-  },
-  {
-    key: "lezione7",
-    title: "Modulo 7 — Responsabilità e Sanzioni",
-    videoUrl: "https://youtu.be/aJL1c7LzP6E",
-  },
-  {
-    key: "lezione8",
-    title: "Modulo 8 — Privacy come Processo Continuo",
-    videoUrl: "https://youtu.be/pNXYDiyDV_M",
-  },
-  {
-    key: "lezione9",
-    title: "Modulo 9 — Documenti Cartacei",
-    videoUrl: "https://youtu.be/2-q_BCWPDpk",
-  },
-  {
-    key: "lezione10",
-    title: "Modulo 10 — Governance e Compliance GDPR",
-    videoUrl: "https://youtu.be/CmMerixgD-0",
-  },
-];
 
 type StepKey = `mod${number}` | "test";
 
@@ -283,16 +227,20 @@ function CorsoPage() {
               const isActive = active === s.key;
               const clickable = s.unlocked;
               const Icon = s.icon;
+
+              // Schema colori richiesto: bordo Blu Elettrico sempre, su
+              // tutte le card (completate, attiva, bloccate). Sfondo:
+              // azzurro se già completato, verdino se è il modulo
+              // attivo/attivabile ora, bianco per tutti gli altri.
+              const ELECTRIC_BLUE = "#0047FF";
+              const bgColor = s.completed ? "#DCEEFF" : isActive ? "#E3FBE5" : "#FFFFFF";
+
               const cardClass = cn(
                 "relative w-40 text-left rounded-lg border-2 p-3 transition-all",
                 "flex flex-col gap-1",
-                isActive
-                  ? "shadow-md bg-card"
-                  : clickable
-                    ? "border-border bg-card hover:border-[#003153]/40 hover:bg-accent/40"
-                    : "border-border/60 bg-muted/30 cursor-not-allowed",
+                clickable ? "hover:shadow-md" : "cursor-not-allowed opacity-90",
               );
-              const cardStyle = isActive ? { borderColor: "#003153" } : undefined;
+              const cardStyle = { borderColor: ELECTRIC_BLUE, backgroundColor: bgColor };
               const inner = (
                 <>
                   <div className="flex items-center justify-between">
