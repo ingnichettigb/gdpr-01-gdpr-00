@@ -31,6 +31,27 @@ const MESSAGES: Record<ActivationReason, string> = {
     "Si è verificato un errore tecnico. Riprova tra qualche minuto o contattaci indicando il codice errore. (E-500)",
 };
 
+// Motivi restituiti da getFunnelStatus (src/lib/funnel-guard.functions.ts) quando
+// corso.tsx o test.tsx reindirizzano qui perché il PUK/licenza risolto lato client
+// non è (più) valido. Vanno mostrati subito all'apertura pagina, non dopo un submit,
+// altrimenti l'utente atterra su un form vuoto senza sapere perché non può più procedere.
+const FUNNEL_MESSAGES: Record<string, string> = {
+  puk_scaduto:
+    "Il tempo a disposizione per completare il corso è scaduto. Contattaci per un'estensione o il rinnovo. (E-301)",
+  licenza_scaduta:
+    "Il tempo a disposizione per completare il corso è scaduto: la licenza associata non è più valida. Contattaci per il rinnovo. (E-103)",
+  puk_non_trovato:
+    "Il codice PUK associato al tuo accesso non risulta più valido. Contattaci per assistenza. (E-302)",
+  puk_senza_licenza:
+    "Il tuo codice PUK non risulta collegato a nessuna licenza. Contattaci per assistenza. (E-303)",
+  licenza_non_trovata:
+    "La licenza associata al tuo accesso non è stata trovata. Contattaci per assistenza. (E-304)",
+  licenza_disattivata:
+    "La licenza associata al tuo accesso è stata disattivata. Contattaci per assistenza. (E-305)",
+  errore_server:
+    "Si è verificato un errore tecnico nel verificare il tuo accesso. Riprova tra qualche minuto o contattaci indicando il codice errore. (E-500)",
+};
+
 function AttivazionePage() {
   const navigate = useNavigate();
   const activateFn = useServerFn(verifyAndActivateLicense);
@@ -50,6 +71,20 @@ function AttivazionePage() {
         return;
       }
       setEmail(verified);
+
+      // Se arriviamo qui perché corso.tsx/test.tsx hanno rilevato un PUK o una
+      // licenza non (più) validi, getFunnelStatus ci passa il motivo via query
+      // string: mostriamolo subito, altrimenti l'utente si ritrova su un form
+      // vuoto senza sapere perché non può più procedere.
+      try {
+        const funnelParams = new URLSearchParams(window.location.search);
+        const funnelReason = funnelParams.get("reason");
+        if (funnelReason && FUNNEL_MESSAGES[funnelReason]) {
+          setError(FUNNEL_MESSAGES[funnelReason]);
+        }
+      } catch {
+        // ignore
+      }
 
       // Via di fuga: se l'utente arriva da "corso-gia-completato" con
       // l'esplicita richiesta di inserire un'altra licenza, salta la
@@ -235,3 +270,4 @@ function AttivazionePage() {
     </div>
   );
 }
+
