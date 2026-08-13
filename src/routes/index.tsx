@@ -149,8 +149,17 @@ function Dashboard({ completedModules }: { completedModules: string[] }) {
           {LESSONS.map((l, i) => {
             const done = isDone(l.key);
             const unlocked = i === 0 || isDone(LESSONS[i - 1]!.key);
+            // Stesso schema cromatico del carosello in corso.tsx: bordo Blu
+            // Elettrico sempre, sfondo azzurro se completato, verdino se è
+            // il prossimo da fare ("Disponibile" = l'equivalente di "attivo"
+            // nel carosello), bianco se ancora bloccato.
+            const cardColor = done ? "#DCEEFF" : unlocked ? "#E3FBE5" : "#FFFFFF";
             return (
-              <Card key={l.key}>
+              <Card
+                key={l.key}
+                className="border-2"
+                style={{ borderColor: "#0047FF", backgroundColor: cardColor }}
+              >
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <PlayCircle className="h-5 w-5 text-primary" />
@@ -180,7 +189,13 @@ function Dashboard({ completedModules }: { completedModules: string[] }) {
             );
           })}
 
-          <Card>
+          <Card
+            className="border-2"
+            style={{
+              borderColor: "#0047FF",
+              backgroundColor: allDone ? "#E3FBE5" : "#FFFFFF",
+            }}
+          >
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <FileText className="h-5 w-5 text-primary" />
