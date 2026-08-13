@@ -227,7 +227,7 @@ function TestPage() {
         if (!status.valid) {
           // PUK/licenza non valida o non piu' attiva: niente accesso al test,
           // qualunque cosa dica localStorage.
-          navigate({ to: "/attivazione" });
+          navigate({ to: "/attivazione", search: { reason: status.reason ?? undefined } });
           return;
         }
         if (status.certified) {
@@ -528,3 +528,4 @@ function TestPage() {
     </main>
   );
 }
+
