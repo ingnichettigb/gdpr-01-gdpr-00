@@ -63,7 +63,7 @@ function CorsoPage() {
       try {
         const status = await getStatusFn({ data: { puk } });
         if (!status.valid) {
-          navigate({ to: "/attivazione" });
+          navigate({ to: "/attivazione", search: { reason: status.reason ?? undefined } });
           return;
         }
         if (status.certified) {
