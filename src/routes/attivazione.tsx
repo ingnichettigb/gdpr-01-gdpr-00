@@ -9,6 +9,7 @@ import { Loader2, KeyRound } from "lucide-react";
 import { verifyAndActivateLicense, type ActivationReason } from "@/lib/license.functions";
 import { checkCertificateByPuk } from "@/lib/certificate.functions";
 import { findActiveLicenseByEmail } from "@/lib/course.functions";
+import { consumeFunnelBlockReason, funnelReasonMessage } from "@/lib/funnel-messages";
 
 export const Route = createFileRoute("/attivazione")({
   head: () => ({ meta: [{ title: "Attivazione licenza — Area Corsi" }] }),
@@ -41,6 +42,18 @@ function AttivazionePage() {
   const [puk, setPuk] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const reason = consumeFunnelBlockReason();
+    if (reason) {
+      setError(funnelReasonMessage(reason));
+      try {
+        sessionStorage.setItem("skip_auto_activation", "1");
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -122,14 +135,24 @@ function AttivazionePage() {
       return;
     }
     setLoading(true);
-    const result = await activateFn({ data: { email, licenseKey, puk } });
+    let result: Awaited<ReturnType<typeof activateFn>>;
+    try {
+      result = await activateFn({ data: { email, licenseKey, puk } });
+    } catch (err) {
+      console.error("verifyAndActivateLicense exception", err);
+      setLoading(false);
+      setError(
+        "Si è verificato un errore tecnico durante l'attivazione. Riprova tra qualche minuto o contattaci. (E-500)",
+      );
+      return;
+    }
     setLoading(false);
 
     if (!result.ok) {
-      if (result.reason === "email_not_verified") {
-        navigate({ to: "/auth" });
-        return;
-      }
+      // Prima qui, per il solo caso "email non verificata", si veniva
+      // rimandati in silenzio a /auth senza alcun messaggio: causa diretta
+      // del loop invisibile riscontrato (E-001 non veniva mai mostrato).
+      // Ora mostriamo sempre il motivo, per ogni caso.
       setError(MESSAGES[result.reason]);
       return;
     }
@@ -216,9 +239,19 @@ function AttivazionePage() {
             </div>
 
             {error && (
-              <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {error}
-              </p>
+              <div className="rounded-md bg-destructive/10 px-3 py-2 space-y-2">
+                <p className="text-sm text-destructive">{error}</p>
+                {error === MESSAGES.email_not_verified && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate({ to: "/auth" })}
+                  >
+                    Verifica di nuovo l'email
+                  </Button>
+                )}
+              </div>
             )}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (

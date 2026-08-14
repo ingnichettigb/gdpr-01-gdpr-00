@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { VideoLesson, isLessonCompleted, currentPuk } from "@/components/VideoLesson";
 import { markVideoCompleted } from "@/lib/video-progress.functions";
 import { getFunnelStatus } from "@/lib/funnel-guard.functions";
+import { setFunnelBlockReason } from "@/lib/funnel-messages";
 import { LESSONS } from "@/lib/course-content";
 import { Button } from "@/components/ui/button";
 import { Lock, CheckCircle2, PlayCircle, GraduationCap } from "lucide-react";
@@ -63,6 +64,7 @@ function CorsoPage() {
       try {
         const status = await getStatusFn({ data: { puk } });
         if (!status.valid) {
+          setFunnelBlockReason(status.reason);
           navigate({ to: "/attivazione" });
           return;
         }
@@ -80,6 +82,7 @@ function CorsoPage() {
         });
       } catch (err) {
         console.error("getFunnelStatus fallito:", err);
+        setFunnelBlockReason("errore_server");
         navigate({ to: "/attivazione" });
         return;
       }
