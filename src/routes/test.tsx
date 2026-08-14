@@ -8,7 +8,6 @@ import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { currentPuk } from "@/components/VideoLesson";
 import { saveCertificate } from "@/lib/certificate.functions";
 import { getFunnelStatus } from "@/lib/funnel-guard.functions";
-import { setFunnelBlockReason } from "@/lib/funnel-messages";
 import { LESSONS } from "@/lib/course-content";
 import { getParticipantData } from "@/lib/participant-data.functions";
 
@@ -228,8 +227,7 @@ function TestPage() {
         if (!status.valid) {
           // PUK/licenza non valida o non piu' attiva: niente accesso al test,
           // qualunque cosa dica localStorage.
-          setFunnelBlockReason(status.reason);
-          navigate({ to: "/attivazione" });
+          navigate({ to: "/attivazione", search: { reason: status.reason ?? undefined } });
           return;
         }
         if (status.certified) {
@@ -530,3 +528,4 @@ function TestPage() {
     </main>
   );
 }
+
